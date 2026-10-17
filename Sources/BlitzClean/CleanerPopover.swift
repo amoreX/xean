@@ -11,20 +11,35 @@ final class CleanerPopover: NSPopover {
   var didDismiss: (() -> Void)?
   private(set) var isPresented = false
   private var generation = 0
+  private var presentationAnchor: CleanerPresentationAnchor?
   var window: NSWindow? { contentViewController?.view.window }
 
   func present(relativeTo rect: NSRect, of view: NSView) {
+    guard let sourceWindow = view.window else { return }
     generation += 1
     isPresented = true
     animates = false
     if !isShown {
+      let screenRect = sourceWindow.convertToScreen(view.convert(rect, to: nil))
+      let anchor = CleanerPresentationAnchor(screenRect: screenRect)
+      presentationAnchor = anchor
+      anchor.orderFront(nil)
       appearance = NSApp.effectiveAppearance
-      show(relativeTo: rect, of: view, preferredEdge: .minY)
+      show(
+        relativeTo: anchor.positioningView.bounds, of: anchor.positioningView,
+        preferredEdge: .minY)
       window?.alphaValue = 0
     }
     window?.makeKey()
     window?.makeFirstResponder(nil)
     animate { [weak self] in self?.window?.animator().alphaValue = 1 }
+  }
+
+  override func close() {
+    super.close()
+    presentationAnchor?.orderOut(nil)
+    presentationAnchor = nil
+    isPresented = false
   }
 
   func dismissAnimated() {
@@ -65,7 +80,34 @@ final class CleanerPopover: NSPopover {
   }
 }
 
-/// AppKit follows this fixed-size view as the status item's metrics expand to its left.
+/// A transparent, noninteractive host keeps native popover placement independent of menu bar layout.
+@MainActor
+private final class CleanerPresentationAnchor: NSWindow {
+  let positioningView = NSView()
+
+  init(screenRect: NSRect) {
+    super.init(
+      contentRect: screenRect, styleMask: [.borderless],
+      backing: .buffered, defer: false)
+    contentView = positioningView
+    isOpaque = false
+    backgroundColor = .clear
+    hasShadow = false
+    ignoresMouseEvents = true
+    hidesOnDeactivate = false
+    isReleasedWhenClosed = false
+    level = .statusBar
+    collectionBehavior = [.transient, .ignoresCycle, .fullScreenAuxiliary]
+    setFrame(screenRect, display: false)
+    setAccessibilityElement(false)
+    positioningView.setAccessibilityElement(false)
+  }
+
+  override var canBecomeKey: Bool { false }
+  override var canBecomeMain: Bool { false }
+}
+
+/// Locates the eraser when opening the popover and positions its warning badge.
 @MainActor
 final class CleanerStatusAnchor: NSView {
   init(in view: NSView, trailingInset: CGFloat) {

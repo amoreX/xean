@@ -80,4 +80,90 @@ struct CleanerPopoverTests {
       #expect(popover.positioningRect == anchor.bounds)
     }
   }
+
+  @Test func anOpenPopoverStaysPutDuringSeparateMenuBarLayoutUpdates() async throws {
+    let screen = try #require(NSScreen.main).visibleFrame
+    let window = NSWindow(
+      contentRect: NSRect(x: screen.midX - 140, y: screen.maxY - 40, width: 240, height: 24),
+      styleMask: [.borderless], backing: .buffered, defer: false)
+    let button = try #require(window.contentView)
+    let anchor = CleanerStatusAnchor(in: button, trailingInset: 3)
+    window.orderFrontRegardless()
+    button.layoutSubtreeIfNeeded()
+    let popover = CleanerPopover()
+    let controller = NSHostingController(
+      rootView: Text("Stationary panel fixture").frame(width: 200, height: 100))
+    controller.sizingOptions = []
+    popover.contentViewController = controller
+    popover.contentSize = NSSize(width: 200, height: 100)
+    defer {
+      popover.close()
+      window.orderOut(nil)
+    }
+    popover.present(relativeTo: anchor.bounds, of: anchor)
+    try await Task.sleep(for: .milliseconds(250))
+    let originalFrame = try #require(popover.window).frame
+    let originalSourceFrame = window.frame
+
+    // The menu bar need not update a status window's origin and width atomically.
+    window.setFrameOrigin(NSPoint(x: window.frame.minX + 90, y: window.frame.minY))
+    try await Task.sleep(for: .milliseconds(60))
+    #expect(try #require(popover.window).frame == originalFrame)
+    window.setContentSize(NSSize(width: 150, height: 24))
+    button.layoutSubtreeIfNeeded()
+    try await Task.sleep(for: .milliseconds(60))
+    #expect(try #require(popover.window).frame == originalFrame)
+
+    // Also keep the open panel still if a neighboring status item shifts the eraser.
+    window.setFrameOrigin(NSPoint(x: originalSourceFrame.minX - 50, y: window.frame.minY - 8))
+    try await Task.sleep(for: .milliseconds(60))
+    #expect(try #require(popover.window).frame == originalFrame)
+    popover.close()
+    popover.present(relativeTo: anchor.bounds, of: anchor)
+    try await Task.sleep(for: .milliseconds(250))
+    let newAnchor = window.convertToScreen(anchor.convert(anchor.bounds, to: nil))
+    #expect(abs(try #require(popover.window).frame.midX - newAnchor.midX) < 0.5)
+  }
+
+  @Test func screenEdgePlacementMatchesAppKitAndQuitResizesDownward() async throws {
+    let screen = try #require(NSScreen.main).frame
+    let sourceRect = NSRect(x: screen.midX, y: screen.maxY - 24, width: 24, height: 24)
+    let source = NSWindow(
+      contentRect: sourceRect, styleMask: [.borderless], backing: .buffered, defer: false)
+    source.level = .statusBar
+    source.setFrame(sourceRect, display: false)
+    source.orderFrontRegardless()
+    defer { source.orderOut(nil) }
+    let button = try #require(source.contentView)
+    button.layoutSubtreeIfNeeded()
+    let controller = NSHostingController(rootView: Text("Menu bar fixture"))
+    controller.sizingOptions = []
+    let native = NSPopover()
+    native.animates = false
+    native.contentViewController = controller
+    native.contentSize = NSSize(width: 200, height: 100)
+    native.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    try await Task.sleep(for: .milliseconds(60))
+    let nativeFrame = try #require(controller.view.window).frame
+    native.close()
+    native.contentViewController = nil
+
+    let popover = CleanerPopover()
+    popover.contentViewController = controller
+    popover.contentSize = NSSize(width: 200, height: 100)
+    defer { popover.close() }
+    popover.present(relativeTo: button.bounds, of: button)
+    try await Task.sleep(for: .milliseconds(250))
+    let frame = try #require(popover.window).frame
+    #expect(frame == nativeFrame)
+    popover.resize(to: NSSize(width: 200, height: 64), animated: true)
+    try await Task.sleep(for: .milliseconds(250))
+    let compact = try #require(popover.window).frame
+    #expect(compact.minX == frame.minX)
+    #expect(compact.maxY == frame.maxY)
+    #expect(compact.height < frame.height)
+    popover.resize(to: NSSize(width: 200, height: 100), animated: true)
+    try await Task.sleep(for: .milliseconds(250))
+    #expect(try #require(popover.window).frame == frame)
+  }
 }

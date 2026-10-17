@@ -44,10 +44,11 @@ All source paths below are relative to [`Sources/BlitzClean`](../Sources/BlitzCl
 | `LaunchAtLoginController.swift` | `SMAppService.mainApp` registration and error reporting |
 
 Popover content is 420 × 580 points, shortened for smaller screens. Quit uses 64 points of content height.
-`CleanerStatusAnchor` is a fixed-size view over the trailing eraser; AppKit follows it while stats expand
-to its left, without rewriting the popover's positioning rectangle on each sample. Dismissal clears
-transient state only after the window closes; a generation check prevents a stale close completion from
-dismissing a reopened panel.
+`CleanerStatusAnchor` locates the trailing eraser. On opening, `CleanerPopover` captures that screen
+rectangle in a transparent, noninteractive `CleanerPresentationAnchor` window and presents the native
+popover relative to it. The host stays fixed while the menu bar relayouts, then disappears on close.
+Reopening captures the eraser's current location. Dismissal clears transient state only after the window
+closes; a generation check prevents a stale close completion from dismissing a reopened panel.
 
 ## State and operations
 

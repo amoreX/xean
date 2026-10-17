@@ -1,5 +1,12 @@
 # xean changelog
 
+## 2026-10-18 — Stationary popover
+
+- Freeze the panel's screen position while it is open, including during separate menu bar origin/width
+  updates and neighboring status-item changes. Capture the current eraser location on reopening.
+- Retain the native popover appearance and compact Quit transition with an invisible, noninteractive
+  positioning host. Add a regression that fails with the former live menu bar anchor.
+
 ## 2026-10-17 — Current source build
 
 This is the xean fork's development history, not a published binary release. The bundle still carries

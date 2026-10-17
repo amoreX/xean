@@ -57,8 +57,10 @@ with no sound settings; opening and closing are silent.
 
 Menu bar metrics use the original BlitzClean icons, typography and renderer, positioned to the left
 of the eraser. Width changes animate for 180 ms while the eraser and its popover stay anchored.
-Attach the native popover to a fixed-size view over the eraser, pinned to the trailing edge of the
-status button. Let AppKit follow that view; do not recalculate the pointer from the changing stats image.
+Capture the eraser's screen position when opening and keep the panel stationary until it closes.
+Use a transparent, noninteractive native anchor host at that fixed position so the popover never follows
+intermediate menu bar layout changes. Reopening captures the current eraser position. The host adds no
+visible surface or border; AppKit still draws the entire popover. Quit may change its height downward.
 Show menu bar stats is enabled by default and stops two-second sampling when disabled. Clicking its
 label or switch toggles the feature and reveals or collapses the metric controls directly beneath it,
 indented one level. Do not add a separate Stats shown row or disclosure. The controls select CPU, memory
