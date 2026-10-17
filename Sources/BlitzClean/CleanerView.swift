@@ -1,62 +1,39 @@
 import SwiftUI
 
 struct CleanerView: View {
-  private let colors = BlitzPalette.paper
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @ObservedObject var model: CleanerModel
   @ObservedObject var launchAtLogin: LaunchAtLoginController
   @ObservedObject var menuBarStats: CleanerMenuBarStats
-  @ObservedObject var presentation = CleanerPopoverPresentation()
-  var pointerX: CGFloat?
   var confirmingQuit = false
   var onQuitRequest: () -> Void = {}
   var onQuitCancel: () -> Void = {}
+  var onClose: () -> Void = {}
   @State private var confirmAutomatic = false
   @State private var showStatsOptions = false
 
   var body: some View {
-    let visible = presentation.isVisible
-    let scale = reduceMotion || visible ? 1.0 : 0.975
-    ZStack {
-      cleanerContent
-        .opacity(confirmingQuit ? 0 : 1)
-        .disabled(confirmingQuit)
-        .allowsHitTesting(!confirmingQuit)
-        .accessibilityHidden(confirmingQuit)
+    Group {
       if confirmingQuit {
-        quitConfirmation.transition(.opacity)
+        quitConfirmation
+      } else if let cleanup = model.cleanup {
+        VStack(spacing: 0) {
+          header.padding(.horizontal, 18).padding(.top, 14).padding(.bottom, 10)
+          CleanerCleanupView(model: model, cleanup: cleanup, onClose: onClose)
+        }
+      } else {
+        cleanerContent
       }
     }
-    .foregroundStyle(colors.primaryText)
-    .padding(.top, CleanerPopoverShape.pointerHeight)
-    .background {
-      CleanerWindowBackdrop(pointerX: pointerX, cornerRadius: confirmingQuit ? 28 : 22)
-    }
-    .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: confirmingQuit)
-    .environment(\.colorScheme, .light)
-    .environment(\.blitzPalette, colors)
-    .environment(\.blitzGlassEnabled, true)
-    .tint(colors.accent)
-    .frame(
-      minWidth: 380, idealWidth: 420, maxWidth: .infinity,
-      minHeight: confirmingQuit ? 0 : 400,
-      idealHeight: confirmingQuit ? CleanerPopoverPlacement.quitContentHeight : 580
-    )
-    .visualEffect { content, geometry in
-      let anchor = UnitPoint(
-        x: (pointerX ?? geometry.size.width / 2) / max(1, geometry.size.width), y: 0)
-      return
-        content
-        .scaleEffect(scale, anchor: anchor)
-        .opacity(visible ? 1 : 0)
-    }
-    .accessibilityHidden(!visible)
+    .font(.system(size: 13))
+    .foregroundStyle(.primary)
+    .frame(width: CleanerPopover.contentWidth)
+    .frame(maxHeight: .infinity, alignment: .top)
     .task { await model.refreshDisk() }
   }
 
   private var cleanerContent: some View {
     VStack(spacing: 0) {
-      header.padding(.leading, 18).padding(.trailing, 8).padding(.top, 10).padding(.bottom, 2)
+      header.padding(.horizontal, 18).padding(.top, 14).padding(.bottom, 4)
 
       ScrollView {
         VStack(alignment: .leading, spacing: 14) {
@@ -70,15 +47,6 @@ struct CleanerView: View {
           .background {
             CleanerScrollBehavior().allowsHitTesting(false).accessibilityHidden(true)
           }
-          .animation(
-            reduceMotion ? nil : .easeInOut(duration: 0.22), value: model.preferences.mode
-          )
-          .animation(
-            reduceMotion ? nil : .easeInOut(duration: 0.22),
-            value: model.preferences.warningsEnabled
-          )
-          .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: menuBarStats.enabled)
-          .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: showStatsOptions)
       }.cleanerScrollViewport()
       footer.padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 12)
     }
@@ -95,10 +63,10 @@ struct CleanerView: View {
         }
         Text(model.available.map { ByteText.full($0) + " free" } ?? "Checking space…")
           .monospacedDigit().lineLimit(1)
-      }.font(BlitzType.body).foregroundStyle(colors.secondaryText)
+      }.font(BlitzType.body).foregroundStyle(.secondary)
       Button(action: onQuitRequest) {
         Image(systemName: "power").font(.system(size: 14, weight: .medium))
-      }.blitzButton(.quiet)
+      }.buttonStyle(.borderless)
         .accessibilityLabel("Quit xean")
         .help("Quit xean")
     }
@@ -108,9 +76,8 @@ struct CleanerView: View {
     HStack(spacing: 10) {
       Text("Quit xean?").font(.system(size: 15, weight: .semibold)).lineLimit(1)
       Spacer(minLength: 12)
-      Button("Cancel", action: onQuitCancel).blitzButton(.secondary).clipShape(Capsule())
-      Button("Quit") { AppLifetime.stopMonitoringAndQuit() }.blitzButton(.accent)
-        .clipShape(Capsule())
+      Button("Cancel", action: onQuitCancel).cleanerButton()
+      Button("Quit") { AppLifetime.stopMonitoringAndQuit() }.cleanerButton(prominent: true)
     }.padding(.horizontal, 20).padding(.vertical, 16)
       .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
@@ -133,44 +100,40 @@ struct CleanerView: View {
         Text(
           "Age includes file changes and Git activity. Primary, detached, locked, unmerged and dirty worktrees stay."
         )
-        .font(BlitzType.caption).foregroundStyle(colors.secondaryText).cleanerScrollItem()
+        .font(BlitzType.caption).foregroundStyle(.secondary).cleanerScrollItem()
       }
     }
   }
 
-  private var warningSettings: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Toggle(
-        "Notify when low",
-        isOn: Binding(
-          get: { model.preferences.warningsEnabled },
-          set: { enabled in
-            model.preferences.warningsEnabled = enabled
-            model.sounds.play(.toggle)
-          })
-      )
-      .toggleStyle(BlitzSwitchStyle()).font(BlitzType.body).cleanerScrollItem()
-      if model.preferences.warningsEnabled {
-        freeSpaceThreshold
-      }
-    }.disabled(model.isBusy)
+  private var warningEnabled: Binding<Bool> {
+    Binding(
+      get: { model.preferences.warningsEnabled },
+      set: { enabled in
+        model.preferences.warningsEnabled = enabled
+        model.sounds.play(.toggle)
+      })
   }
 
-  private var freeSpaceThreshold: some View {
-    HStack {
-      Text("Free space below").font(BlitzType.body)
-      Spacer()
+  private var warningSettings: some View {
+    HStack(spacing: 8) {
+      Text("Notify when low")
+        .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+        .onTapGesture { warningEnabled.wrappedValue.toggle() }
+        .accessibilityHidden(true)
       numberField("Free-space limit", value: $model.preferences.freeSpaceGB, range: 1...1_000)
-      Text("GB").font(BlitzType.body)
-    }.frame(minHeight: 34).padding(.leading, 16).cleanerScrollItem()
+      Text("GB")
+      Toggle("Notify when low", isOn: warningEnabled)
+        .labelsHidden().toggleStyle(.switch)
+    }.font(BlitzType.body).frame(height: 34).cleanerScrollItem()
+      .disabled(model.isBusy)
   }
 
   private var settings: some View {
     VStack(alignment: .leading, spacing: 0) {
       Toggle("Show menu bar stats", isOn: $menuBarStats.enabled)
-        .toggleStyle(BlitzSwitchStyle()).font(BlitzType.body).cleanerScrollItem()
+        .cleanerSwitchRow().font(BlitzType.body).cleanerScrollItem()
         .onChange(of: menuBarStats.enabled) { _, _ in model.sounds.play(.toggle) }
-      if menuBarStats.enabled {
+      CleanerDisclosureReveal(expanded: menuBarStats.enabled) {
         VStack(alignment: .leading, spacing: 0) {
           Button {
             showStatsOptions.toggle()
@@ -181,13 +144,13 @@ struct CleanerView: View {
               Spacer()
               Image(systemName: "chevron.right")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(colors.secondaryText)
+                .foregroundStyle(.secondary)
                 .rotationEffect(.degrees(showStatsOptions ? 90 : 0))
                 .frame(width: 38)
             }.frame(maxWidth: .infinity, minHeight: 34).contentShape(Rectangle())
           }.buttonStyle(.plain).cleanerScrollItem()
             .accessibilityValue(showStatsOptions ? "Expanded" : "Collapsed")
-          if showStatsOptions {
+          CleanerDisclosureReveal(expanded: showStatsOptions) {
             statsOptions
           }
         }.font(BlitzType.body)
@@ -198,28 +161,29 @@ struct CleanerView: View {
         "Start at login",
         isOn: Binding(get: { launchAtLogin.enabled }, set: { launchAtLogin.setEnabled($0) })
       )
-      .toggleStyle(BlitzSwitchStyle()).font(BlitzType.body).cleanerScrollItem()
+      .cleanerSwitchRow().font(BlitzType.body).cleanerScrollItem()
     }
   }
 
   private var statsOptions: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Toggle("CPU", isOn: $menuBarStats.display.showCPU)
+      Toggle("CPU", isOn: $menuBarStats.display.showCPU).cleanerSwitchRow()
         .disabled(menuBarStats.display.showCPU && menuBarStats.display.count == 1)
         .cleanerScrollItem()
-      Toggle("Memory", isOn: $menuBarStats.display.showMemory)
+      Toggle("Memory", isOn: $menuBarStats.display.showMemory).cleanerSwitchRow()
         .disabled(menuBarStats.display.showMemory && menuBarStats.display.count == 1)
         .cleanerScrollItem()
       if menuBarStats.display.showMemory {
-        BlitzSegmentedPicker(
-          title: "Memory value", options: MenuBarMemoryDisplay.allCases,
-          selection: $menuBarStats.display.memoryDisplay, label: { $0.label }
-        ).padding(.vertical, 4).cleanerScrollItem()
+        Picker("Memory value", selection: $menuBarStats.display.memoryDisplay) {
+          ForEach(MenuBarMemoryDisplay.allCases, id: \.self) { value in
+            Text(value.label).tag(value)
+          }
+        }.pickerStyle(.segmented).labelsHidden().padding(.vertical, 6).cleanerScrollItem()
       }
-      Toggle("Disk free", isOn: $menuBarStats.display.showDisk)
+      Toggle("Disk free", isOn: $menuBarStats.display.showDisk).cleanerSwitchRow()
         .disabled(menuBarStats.display.showDisk && menuBarStats.display.count == 1)
         .cleanerScrollItem()
-    }.toggleStyle(BlitzSwitchStyle())
+    }.toggleStyle(.switch)
   }
 
   private var automaticEnabled: Binding<Bool> {
@@ -240,15 +204,12 @@ struct CleanerView: View {
   private var automaticCleanup: some View {
     ZStack {
       if confirmAutomatic {
-        automaticConfirmation.transition(.opacity)
+        automaticConfirmation
       } else {
-        automaticToggle.transition(.opacity)
+        automaticToggle
       }
     }
     .font(BlitzType.body).frame(height: 34).cleanerScrollItem()
-    .animation(
-      reduceMotion ? nil : .smooth(duration: 0.32, extraBounce: 0), value: confirmAutomatic
-    )
     .disabled(model.isBusy)
   }
 
@@ -261,25 +222,23 @@ struct CleanerView: View {
       automaticLimit
       Text("GB")
       Toggle("Auto-clean", isOn: automaticEnabled)
-        .toggleStyle(BlitzSwitchStyle(showsLabel: false))
+        .labelsHidden().toggleStyle(.switch)
     }
   }
 
   private var automaticConfirmation: some View {
     HStack(spacing: 6) {
-      Text("Auto-clean below").lineLimit(1).fixedSize()
-      automaticLimit
-      Text("GB?").fixedSize()
+      Text("Enable auto-clean?").lineLimit(1)
       Spacer(minLength: 2)
       Button("Cancel") {
         confirmAutomatic = false
         model.sounds.play(.tap)
-      }.blitzButton(.secondary)
+      }.cleanerButton()
       Button("OK") {
         model.preferences.setAutomatic(true)
         model.sounds.play(.select)
         confirmAutomatic = false
-      }.blitzButton(.accent).disabled(model.preferences.categories.isEmpty)
+      }.cleanerButton(prominent: true).disabled(model.preferences.categories.isEmpty)
         .accessibilityLabel("Enable auto-clean")
     }
   }
@@ -287,7 +246,7 @@ struct CleanerView: View {
   private var automaticLimit: some View {
     numberField(
       "Auto-clean free-space limit", value: $model.preferences.automaticFreeSpaceGB,
-      range: 1...1_000, width: 30
+      range: 1...1_000, width: 48
     ).help("Automatically clean when free space drops below this many GB.")
   }
 
@@ -296,17 +255,15 @@ struct CleanerView: View {
       HStack(spacing: 8) {
         if model.isBusy && model.loadingCategory == nil { ProgressView().controlSize(.small) }
         if !model.status.isEmpty {
-          Text(model.status).font(BlitzType.caption).foregroundStyle(colors.supportingText)
+          Text(model.status).font(BlitzType.caption).foregroundStyle(.secondary)
             .lineLimit(2).fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("cleaner-status")
-            .transition(.opacity)
         }
       }
-      .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: model.status.isEmpty)
       Spacer(minLength: 0)
       Button("Clean") {
         Task { await model.cleanSelected() }
-      }.blitzButton(.accent)
+      }.cleanerButton(prominent: true)
         .disabled(model.isBusy || model.preferences.categories.isEmpty)
         .fixedSize()
     }
@@ -317,19 +274,12 @@ struct CleanerView: View {
   )
     -> some View
   {
-    Stepper(
-      value: Binding(
-        get: { value.wrappedValue },
-        set: { value.wrappedValue = min(range.upperBound, max(range.lowerBound, $0)) }), in: range
-    ) {
-      TextField(title, value: value, format: .number.grouping(.never))
-        .textFieldStyle(.plain).multilineTextAlignment(.trailing).frame(width: width)
-        .padding(.horizontal, 10).padding(.vertical, 5).blitzGlassSurface(radius: 9)
-        .onSubmit {
-          value.wrappedValue = min(range.upperBound, max(range.lowerBound, value.wrappedValue))
-        }
-        .accessibilityLabel(title)
-    }.fixedSize()
+    TextField(title, value: value, format: .number.grouping(.never))
+      .textFieldStyle(.roundedBorder).multilineTextAlignment(.trailing).frame(width: width)
+      .onSubmit {
+        value.wrappedValue = min(range.upperBound, max(range.lowerBound, value.wrappedValue))
+      }
+      .accessibilityLabel(title)
   }
 
 }

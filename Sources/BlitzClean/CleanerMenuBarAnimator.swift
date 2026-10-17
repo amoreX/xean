@@ -41,7 +41,7 @@ final class CleanerMenuBarAnimator {
       let began = ContinuousClock.now
       while !Task.isCancelled {
         guard let self else { return }
-        let progress = min(1, began.duration(to: .now) / .milliseconds(280))
+        let progress = min(1, began.duration(to: .now) / .milliseconds(180))
         let eased = CGFloat(progress * progress * (3 - 2 * progress))
         self.current = Frame(
           width: start.width + (next.width - start.width) * eased,

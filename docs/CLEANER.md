@@ -11,22 +11,26 @@ sampling when off. The cleaner still opens from the icon, and its pointer stays 
 
 1. Check the categories to clean. Common project folders are discovered automatically.
 2. Choose Clean to scan and permanently delete eligible items in the checked categories in one operation. There is no second confirmation. Manual cleanup includes caches and build output of any age.
-3. Stop interrupts the run after the current operation; untouched items stay.
+3. Successful deletions collapse out of the list. When the run finishes, the result shows the removed count and size, including any items that were kept. Done closes the panel; reopening returns to the cleaner. There is no Stop button.
 
-Click any category's title or chevron to expand its items. The dropdown only shows entries measured at 50 MB or larger, including protected entries; smaller and unmeasured entries are hidden. This display filter does not change bulk cleanup eligibility. Each eligible item shows its path and measured size with a direct Delete action. Individual deletion works independently of the bulk-selection checkboxes. Deleted items disappear immediately; failed removals remain with an inline reason. Worktrees include their branch; protected checkouts show why they are kept. Completed category scans are reused for 30 seconds. Opening a missing, expired or invalidated list scans it again and shows Checking… with the previous items cleared immediately. The 30 seconds starts when scanning finishes. There is no Refresh button. The list's height uses a non-bouncing 400 ms spring for opening, closing and refreshed results; Reduce Motion disables this animation.
+Click any category's title or chevron to expand its items. The dropdown only shows entries measured at 50 MB or larger, including protected entries; smaller and unmeasured entries are hidden. This display filter does not change bulk cleanup eligibility. Each eligible item shows its path and measured size with a direct Delete action. Individual deletion works independently of the bulk-selection checkboxes. Deleted items collapse out of the list; failed removals remain with an inline reason. Worktrees include their branch; protected checkouts show why they are kept. Completed category scans are reused for 30 seconds. Opening a missing, expired or invalidated list scans it again and shows Checking… with the previous items cleared immediately. The 30 seconds starts when scanning finishes. There is no Refresh button. List height changes take 180 ms without text fades or scaling; Reduce Motion disables this animation.
 
-Both background switches start off. Low-space warning shows a red exclamation badge on the menu bar eraser and beside the free-space subtitle below the chosen GB threshold. It clears when free space recovers and works independently of Auto-clean. No macOS notifications or notification permissions are used. A previously saved Notify me choice becomes the visual warning. The Auto-clean switch at the top asks for opt-in, then scans and deletes eligible items in the checked categories below the configured GB threshold. Checks use a fixed 25-minute interval, including for previously saved preferences. The app must be running; Start at login is optional. Checks do not wake a sleeping Mac. Failed disk measurements prevent automatic cleanup. Recovered free space after a scan cancels automatic deletion. Cleanup results remain in the dialog.
+Both background switches start off. Notify when low shows a red exclamation badge on the menu bar eraser and beside the free-space value when disk space falls below the chosen GB threshold. It clears when free space recovers and works independently of Auto-clean. No macOS notifications or notification permissions are used. A previously saved Notify me choice becomes the visual warning. The Auto-clean switch at the top asks for opt-in, then scans and deletes eligible items in the checked categories below the configured GB threshold. Checks use a fixed 25-minute interval, including for previously saved preferences. The app must be running; Start at login is optional. Checks do not wake a sleeping Mac. Failed disk measurements prevent automatic cleanup. Recovered free space after a scan cancels automatic deletion. Manual bulk-cleanup results remain until the panel closes; automatic cleanup stays in the background.
 
 Selections, thresholds, folders and the last result persist across relaunch. The next-check schedule uses a persisted last-check time. Clean reuses manual category results up to 30 seconds old and scans only missing or expired categories, then revalidates each item before removal. Combining cached categories still excludes overlapping removals. Changing categories invalidates the bulk selection; changing roots or worktree age also clears the dropdown caches. Automatic cleanup clears affected dropdown results and uses a fresh scan with its age policy.
 
-The popover uses one continuous light Liquid Glass background with charcoal controls, supplied by
-[metneo/LiquidGlass](https://github.com/metneo/LiquidGlass). macOS 26 uses system glass; macOS 14–15 use
-the package's material fallback. The popover blurs the desktop behind it. Reduce Transparency and Increase
-Contrast use an opaque background and controls; the custom interactions respect Reduce Motion.
-The compact 420 × 592-point panel has unboxed sections and a fixed footer. Tight spacing groups the
-content without horizontal dividers,
-and quiet actions appear as text. There are no mode tabs. Low-space warning and Auto-clean have separate switches; their settings expand and fade smoothly. The anchored panel uses a non-bouncing fade and slight scale over 460 ms when opening and 360 ms when closing. The pointer stays fixed, and rapid reopen clicks reverse the current motion. The window hides after the animation finishes; Reduce Motion makes visibility immediate. Discrete mouse-wheel steps ease over 180 ms, while trackpad scrolling keeps native momentum. There is no scrollbar; rows subtly shrink, blur and fade as they cross the top and
-bottom edges. Reduce Motion disables the scaling and blur, while Increase Contrast removes the fade too.
+AppKit supplies the native popover background, border, pointer and shadow. The cleaner follows
+system light/dark appearance and uses native switches, checkboxes, text fields and segmented controls.
+Buttons use Liquid Glass on macOS 26 or newer and standard bordered styles on older systems. There
+are no custom borders or layered glass backgrounds. Content is 420 × 580 points, shortened on smaller
+screens, with unboxed sections and a fixed header and footer. Auto-clean and Notify when low each
+fit on one row with their own plain GB input beside the toggle. Numeric inputs have no steppers.
+
+Custom transitions take 180 ms, without bouncing, text fades or content scaling. The popover fades
+as one window; disclosures and removed entries change only their clipped height. Reduce Motion makes
+these changes immediate. The scroll-edge blur and fade remain, with no row scaling. Discrete mouse-wheel
+steps ease over 180 ms while trackpads retain native momentum. Increase Contrast removes the edge fade;
+Reduce Motion and Increase Contrast disable the blur.
 
 Interface sounds come from [Cuelume](https://cuelume.dev), rendered from its default recipes and played locally. Interface sounds are always enabled at 70%, with no sound controls. Opening and closing the dialog is silent. Sounds play only while the app is active, use one voice, and suppress rapid repeated clicks. Background checks are silent. Old sound preferences are ignored.
 
@@ -51,26 +55,26 @@ Deletion rechecks identity, file metadata, age and activity. A small filesystem 
 
 ## Development
 
-Auto-clean sits directly below the header, above What to clean. Its inline confirmation is one compact
-row showing an editable free-space threshold with Cancel and OK. It replaces the toggle row with a
-320 ms crossfade, preserving the same 34-point height so the content stays stationary.
-“Notify when low” sits immediately below Auto-clean and groups its own free-space threshold with an indent.
-The two limits are independent and persist separately; existing shared limits migrate to both. The
-Auto-clean limit stays editable in its normal row as well as its confirmation. Glass buttons are clipped
-to their rounded outlines to remove the dark spill beneath them. The Stats shown disclosure and
-metric choices have the same indent below Show menu bar stats. Stats sit to the left of the eraser;
-changing their visibility eases the label width leftward and fades the metrics over 280 ms, keeping
-the eraser and popover stationary. Settings use native macOS switches and consistent 34-point rows.
-Reduce Motion applies changes immediately. Cleanup keeps Clean disabled with progress beside it, without a Stop
-button. Only the transient footer result is shown; the persistent cleanup-history paragraphs are hidden.
+Run `./start.sh` from the repository to build the app on first run and open its cleaner panel.
+Subsequent starts reuse `dist/BlitzClean.app`. After editing source, quit xean and use
+`./start.sh --build`. The launcher uses ad-hoc signing unless `BLITZCLEAN_SIGNING_IDENTITY` is set.
+Xcode 26 or newer is required to compile the native glass APIs; the app supports macOS 14 or later.
 
-The header places “xean”, free disk space and a power icon on one line. Power or ⌘Q transforms
-the same anchored popover into a padded, rounded 72-point-high row containing Quit xean?, Cancel and Quit,
-with no sheet, modal window or subtitle.
-Cancel or Escape expands it back to the cleaner; confirming Quit stops the app. The resize and
-content fade take 300 ms and 240 ms respectively, or happen immediately with Reduce Motion enabled.
+Auto-clean sits directly below the header, above What to clean. Its opt-in replaces the same 34-point
+row with “Enable auto-clean?”, Cancel and OK, without repeating the threshold field. The independent
+Auto-clean and Notify when low thresholds stay visible in their normal rows even when switched off.
+Stats shown and its choices are indented beneath Show menu bar stats. Metrics sit to the left of the
+eraser; their width changes take 180 ms while the eraser and popover stay anchored.
 
-Run `swift test --no-parallel -j 2`. Render the dialog with `BLITZCLEAN_DESIGN_DIR=artifacts/cleaner swift test --filter CleanerRenderTests`, then inspect a packaged app. `BLITZCLEAN_SIGNING_IDENTITY=- ./scripts/build-app.sh` builds an ad-hoc local app in `dist`. Open it normally for icon-only launch, or pass `--cleaner` to open the dialog. Test removal only with disposable fixtures.
+The header places “xean”, free disk space and a power icon on one line. Power or ⌘Q replaces the
+popover with a compact “Quit xean?”, Cancel and Quit row, using 64 points of content height. Cancel
+or Escape restores the cleaner. There is no separate sheet or modal window.
+
+Run `swift test --no-parallel -j 2`. Render the dialog with
+`BLITZCLEAN_DESIGN_DIR=artifacts/cleaner swift test --filter CleanerRenderTests`, then inspect a packaged
+app. Test removal only with disposable fixtures. Individual Delete keeps short footer feedback for
+five seconds; bulk Clean uses its dedicated progress and result screens. Closing the panel clears the
+result without stopping an active cleanup. No saved history paragraph appears in the interface.
 
 ### Reproduce sound assets
 
@@ -83,6 +87,5 @@ under `Sources/BlitzClean/Resources/Cuelume`. SwiftPM bundles them; app packagin
 and MIT notice. No Node.js runtime or network connection is needed in the app.
 
 LiquidGlass is pinned to revision `36f81c85922aa3475b7e5bb210e69ffe20a2b377` in SwiftPM. Packaging includes
-its resource bundle (needed by the older-system renderer) and original MIT license. Its package skill is
-the reference for `.liquidGlass` and `.glassStyleButton`; checkbox labels and keyboard behavior continue
-to use the app's accessible controls.
+its resource bundle and original MIT license for retained historical components. The cleaner itself
+uses the native AppKit popover and SwiftUI controls.

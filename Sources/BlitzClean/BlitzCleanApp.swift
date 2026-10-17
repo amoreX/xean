@@ -16,9 +16,8 @@ enum BlitzCleanApp {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
   private var statusItem: NSStatusItem?
-  private var cleanerPanel: CleanerPopoverPanel?
+  private var cleanerPanel: CleanerPopover?
   private var cleanerHost: NSHostingController<CleanerView>?
-  private var cleanerTargetFrame: NSRect?
   private var confirmingQuit = false
   private let launchAtLogin = LaunchAtLoginController()
   private let menuBarStats = CleanerMenuBarStats()
@@ -50,7 +49,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     NSApp.setActivationPolicy(.accessory)
-    NSApp.appearance = NSAppearance(named: .aqua)
     let menu = NSMenu()
     let applicationItem = NSMenuItem()
     let applicationMenu = NSMenu(title: "BlitzClean")
@@ -215,68 +213,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   private func positionCleaner(animated: Bool) {
     positionWarningBadge()
-    guard let cleaner, let button = statusItem?.button, let anchorWindow = button.window,
-      let screen = anchorWindow.screen, let panel = cleanerPanel
-    else { return }
+    guard let cleaner, let button = statusItem?.button, let panel = cleanerPanel else { return }
     let imageRect = button.cell?.imageRect(forBounds: button.bounds) ?? button.bounds
-    // Stats grow leftward from the eraser, keeping the icon and its popover stationary.
-    let iconRect = NSRect(
-      x: imageRect.maxX - 19, y: button.bounds.minY,
-      width: 18, height: button.bounds.height)
-    let anchor = anchorWindow.convertToScreen(button.convert(iconRect, to: nil))
-    let placement = CleanerPopoverPlacement(
-      anchor: anchor, visibleFrame: screen.visibleFrame,
-      contentHeight: confirmingQuit ? CleanerPopoverPlacement.quitContentHeight : 580)
+    // Keep the native popover attached to the trailing eraser as stats grow leftward.
+    panel.updateAnchor(
+      NSRect(
+        x: imageRect.maxX - 19, y: button.bounds.minY, width: 18, height: button.bounds.height))
     cleanerHost?.rootView = CleanerView(
       model: cleaner, launchAtLogin: launchAtLogin, menuBarStats: menuBarStats,
-      presentation: panel.presentation,
-      pointerX: placement.pointerX, confirmingQuit: confirmingQuit,
+      confirmingQuit: confirmingQuit,
       onQuitRequest: { [weak self] in self?.requestQuit() },
-      onQuitCancel: { [weak self] in self?.setQuitConfirmation(false) })
-    guard cleanerTargetFrame != placement.frame else { return }
-    cleanerTargetFrame = placement.frame
-    if animated && panel.isPresented && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-      NSAnimationContext.runAnimationGroup { context in
-        context.duration = 0.3
-        context.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
-        panel.animator().setFrame(placement.frame, display: true)
-      }
-    } else {
-      panel.setFrame(placement.frame, display: true)
-    }
-    panel.invalidateShadow()
+      onQuitCancel: { [weak self] in self?.setQuitConfirmation(false) },
+      onClose: { [weak self] in self?.closeCleaner() })
+    let availableHeight = (button.window?.screen?.visibleFrame.height ?? 700) - 32
+    panel.resize(
+      to: NSSize(
+        width: CleanerPopover.contentWidth,
+        height: confirmingQuit
+          ? CleanerPopover.quitContentHeight
+          : min(CleanerPopover.contentHeight, availableHeight)),
+      animated: animated)
   }
 
   @objc func showCleaner() {
     guard let cleaner, let button = statusItem?.button else { return }
     if cleanerPanel == nil {
-      let panel = CleanerPopoverPanel(
-        contentRect: .zero, styleMask: [.borderless], backing: .buffered, defer: false)
+      let panel = CleanerPopover()
       let controller = NSHostingController(
         rootView: CleanerView(
-          model: cleaner, launchAtLogin: launchAtLogin, menuBarStats: menuBarStats,
-          presentation: panel.presentation))
+          model: cleaner, launchAtLogin: launchAtLogin, menuBarStats: menuBarStats))
       controller.sizingOptions = []
-      panel.title = "BlitzClean"
       panel.contentViewController = controller
-      panel.isOpaque = false
-      panel.backgroundColor = .clear
-      panel.hasShadow = false
-      panel.isMovable = false
-      panel.isMovableByWindowBackground = false
-      panel.isReleasedWhenClosed = false
-      panel.hidesOnDeactivate = false
-      panel.level = .floating
-      panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary, .transient]
-      panel.dismiss = { [weak self] in self?.cancelCleaner() }
+      panel.behavior = .applicationDefined
+      panel.animates = false
+      panel.didDismiss = { [weak cleaner] in cleaner?.panelClosed() }
       cleanerHost = controller
       cleanerPanel = panel
     }
     guard let panel = cleanerPanel, !panel.isPresented else { return }
+    cleaner.panelClosed()
     confirmingQuit = false
     repositionCleaner()
     NSApp.activate(ignoringOtherApps: true)
-    panel.present()
+    panel.present(relativeTo: panel.anchorRect, of: button)
     button.highlight(true)
     localClickMonitor = NSEvent.addLocalMonitorForEvents(
       matching: [.leftMouseDown, .rightMouseDown, .keyDown]
@@ -290,7 +269,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
           }
           return false
         }
-        if event.window !== self.cleanerPanel,
+        if event.window !== self.cleanerPanel?.window,
           event.window !== self.statusItem?.button?.window, NSApp.modalWindow == nil
         {
           self.closeCleaner()

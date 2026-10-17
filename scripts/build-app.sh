@@ -19,7 +19,11 @@ for ARCH in ${=BUILD_ARCHS}; do
         *) print -u2 "Unsupported architecture: $ARCH"; exit 1 ;;
     esac
 done
-swift build -c release -j "${BLITZCLEAN_BUILD_JOBS:-2}" "${ARCH_FLAGS[@]}"
+# SwiftPM's Xcode backend can stamp the deployment target as the SDK version.
+# Preserve the installed SDK version so AppKit enables its current native appearance.
+BUILD_SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
+swift build -c release -j "${BLITZCLEAN_BUILD_JOBS:-2}" "${ARCH_FLAGS[@]}" \
+    -Xlinker -platform_version -Xlinker macos -Xlinker 14.0 -Xlinker "$BUILD_SDK_VERSION"
 BIN_DIR="$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)"
 "$ROOT_DIR/scripts/build-icon.sh"
 rm -rf "$APP_DIR"

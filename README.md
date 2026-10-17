@@ -5,8 +5,9 @@
 Claude Code, Codex, Superconductor, editor, package, browser, Docker, build, dependency and worktree cleanup.
 Enable a red low-space warning or opt into Auto-clean below a free-space threshold, without notification permissions.
 Expand each category to inspect and delete individual items; set the worktree age for automatic cleanup.
-The interface uses light Liquid Glass from [metneo/LiquidGlass](https://github.com/metneo/LiquidGlass)
-and local [Cuelume](https://cuelume.dev) sound cues, with accessibility fallbacks and fixed 70% playback volume.
+The interface uses a native macOS popover, system controls and Liquid Glass on macOS 26 or newer,
+plus local [Cuelume](https://cuelume.dev) sound cues at 70% volume. Cleanup entries collapse as they are
+removed, followed by a result screen that clears when the panel closes.
 See [the cleaner guide](docs/CLEANER.md) for scope, protections and build instructions. The upstream overview
 below describes the original monitoring app, whose dashboard is no longer launched by this fork.
 
@@ -119,22 +120,25 @@ See [Privacy and permissions](docs/PRIVACY.md) for exactly what is read and stor
 
 ## Build from source
 
-Requires macOS 14+ and a Swift 6 toolchain (Xcode 16 or later).
+Requires macOS 14+ and Xcode 26 or newer for the native Liquid Glass APIs.
 
 ```sh
-git clone https://github.com/blitzreels/blitzclean.git
-cd blitzclean
-./script/build_and_run.sh
+git clone https://github.com/amoreX/xean.git
+cd xean
+./start.sh
 ```
 
-This builds, installs, and opens `~/Applications/BlitzClean.app`, signed with your Apple Development identity
-so macOS permissions stay attached between builds. Without a signing identity, use an ad-hoc build:
+`start.sh` builds `dist/BlitzClean.app` on the first run, then opens the cleaner panel. Later runs
+reuse that app. It stays in this checkout and uses ad-hoc signing by default; an Apple Developer
+account is not required. Set `BLITZCLEAN_SIGNING_IDENTITY` to use your own signing identity.
+
+After source changes, quit xean and rebuild:
 
 ```sh
-BLITZCLEAN_SIGNING_IDENTITY=- ./script/build_and_run.sh
+./start.sh --build
 ```
 
-Ad-hoc rebuilds can ask for permissions again. They are for local development, not distribution.
+The launcher can be called from any directory. It does not interrupt a running cleanup to rebuild.
 
 ### Checks
 

@@ -800,6 +800,75 @@ struct CleanerModelTests {
     #expect(context.model.status == "Automatic cleanup stopped. Nothing was deleted.")
   }
 
+  @Test func cleanupPublishesEachVerifiedRemovalBeforeShowingItsResult() async throws {
+    let context = try context()
+    defer { context.fixture.remove() }
+    var snapshots: [CleanerCleanup] = []
+    let subscription = context.model.$cleanup.sink { if let run = $0 { snapshots.append(run) } }
+    await context.model.cleanSelected()
+    withExtendedLifetime(subscription) {}
+    #expect(snapshots.first?.phase == .scanning)
+    #expect(snapshots.contains { $0.phase == .removing && $0.removedIDs.count == 1 })
+    #expect(snapshots.contains { $0.phase == .removing && $0.removedIDs.count == 2 })
+    let result = try #require(context.model.cleanup)
+    #expect(result.phase == .finished)
+    #expect(result.result?.removed == 2)
+    #expect(result.result?.kept == 0)
+    context.model.panelClosed()
+    #expect(context.model.cleanup == nil)
+    #expect(context.model.status.isEmpty)
+    #expect(context.model.outcome?.removed == 2)
+  }
+
+  @Test func closingDuringCleanupDoesNotStopDeletionOrReopenItsResult() async throws {
+    let context = try context()
+    defer { context.fixture.remove() }
+    let task = Task { await context.model.cleanSelected() }
+    try await Task.sleep(for: .milliseconds(10))
+    #expect(context.model.cleanup?.phase == .scanning)
+    context.model.panelClosed()
+    await task.value
+    #expect(context.model.cleanup == nil)
+    #expect(context.model.outcome?.removed == 2)
+    #expect(!context.model.stopRequested)
+    #expect(!context.model.isBusy)
+  }
+
+  @Test func failedItemsStayInTheResultAndNeverCollapse() async throws {
+    let context = try context(fails: true)
+    defer { context.fixture.remove() }
+    await context.model.cleanSelected()
+    let result = try #require(context.model.cleanup)
+    #expect(result.phase == .finished)
+    #expect(result.removedIDs.isEmpty)
+    #expect(result.result?.kept == 2)
+    #expect(result.result?.removed == 0)
+    #expect(result.items.allSatisfy { context.model.itemFailures[$0.id] != nil })
+  }
+
+  @Test func emptyCleanupHasANothingToCleanResult() async throws {
+    let context = try context()
+    defer { context.fixture.remove() }
+    await context.driver.setScanPaths([])
+    await context.model.cleanSelected()
+    #expect(context.model.cleanup?.phase == .finished)
+    #expect(context.model.cleanup?.items.isEmpty == true)
+    #expect(context.model.cleanup?.result?.removed == 0)
+    #expect(await context.driver.removals.isEmpty)
+  }
+
+  @Test func singleDeleteAndBackgroundCleanupDoNotShowBulkResult() async throws {
+    let context = try context()
+    defer { context.fixture.remove() }
+    await context.model.loadCategory(.claude)
+    let item = try #require(context.model.categoryScans[.claude]?.items.first)
+    await context.model.deleteItem(item)
+    #expect(context.model.cleanup == nil)
+    context.model.preferences.setAutomatic(true)
+    await context.model.backgroundCheck(now: .distantFuture)
+    #expect(context.model.cleanup == nil)
+  }
+
   private func context(
     available: UInt64? = 1_000_000_000, fails: Bool = false,
     now: @escaping () -> Date = { .now }

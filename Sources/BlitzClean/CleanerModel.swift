@@ -14,6 +14,16 @@ struct CleanerOutcome: Codable, Sendable {
   }
 }
 
+struct CleanerCleanup: Identifiable {
+  enum Phase { case scanning, removing, finished }
+  let id = UUID()
+  var phase: Phase = .scanning
+  var items: [CleanerItem] = []
+  var removedIDs: Set<String> = []
+  var result: CleanerOutcome?
+  var protectedCount = 0
+}
+
 @MainActor
 final class CleanerModel: ObservableObject {
   @Published var preferences: CleanerPreferences {
@@ -49,6 +59,7 @@ final class CleanerModel: ObservableObject {
   }
   @Published private(set) var available: UInt64?
   @Published private(set) var outcome: CleanerOutcome?
+  @Published private(set) var cleanup: CleanerCleanup?
   @Published private(set) var nextCheck: Date?
   let sounds: CleanerSounds
   private let defaults: UserDefaults
@@ -203,18 +214,45 @@ final class CleanerModel: ObservableObject {
     await refreshDisk()
   }
 
+  /// Closing the panel clears this presentation, never an in-flight cleanup.
+  func panelClosed() {
+    cleanup = nil
+    if !isBusy { status = "" }
+  }
+
   func cleanSelected() async {
     guard !isBusy, !preferences.categories.isEmpty else { return }
     sounds.play(.tap)
     isBusy = true
     stopRequested = false
+    let run = CleanerCleanup()
+    cleanup = run
     defer { isBusy = false }
     let requested = preferences.normalized
     await scanSelection(requested)
-    guard !stopRequested, requested == preferences.normalized,
-      let items = scan?.items, !items.isEmpty
-    else { return }
-    await clean(items, requested: requested, automatic: false)
+    guard !stopRequested, requested == preferences.normalized, let report = scan else {
+      if cleanup?.id == run.id { cleanup = nil }
+      return
+    }
+    if cleanup?.id == run.id {
+      cleanup?.items = report.items
+      cleanup?.protectedCount = report.kept.count
+      cleanup?.phase = .removing
+    }
+    let result: CleanerOutcome
+    if report.items.isEmpty {
+      result = CleanerOutcome(date: now(), removed: 0, kept: 0, bytes: 0, availableGain: 0)
+    } else {
+      result = await clean(report.items, requested: requested, automatic: false, runID: run.id)
+      // Let the final row finish collapsing before replacing the list with its result.
+      if cleanup?.id == run.id {
+        try? await Task.sleep(for: .milliseconds(180))
+      }
+    }
+    if cleanup?.id == run.id {
+      cleanup?.result = result
+      cleanup?.phase = .finished
+    }
   }
 
   func backgroundCheck(now: Date = .now) async {
@@ -259,10 +297,11 @@ final class CleanerModel: ObservableObject {
     isBusy = false
   }
 
+  @discardableResult
   private func clean(
     _ items: [CleanerItem], requested: CleanerPreferences, automatic: Bool,
-    singleCategory: CleanerCategory? = nil
-  ) async {
+    singleCategory: CleanerCategory? = nil, runID: UUID? = nil
+  ) async -> CleanerOutcome {
     var deletionPreferences = requested
     if let singleCategory { deletionPreferences.categories.insert(singleCategory) }
     let before = await driver.availableBytes()
@@ -282,6 +321,7 @@ final class CleanerModel: ObservableObject {
         let win = try await driver.remove(
           item, preferences: deletionPreferences, automatic: automatic)
         removed.insert(item.id)
+        if let runID, cleanup?.id == runID { cleanup?.removedIDs.insert(item.id) }
         bytes += win.bytes ?? 0
         func wasRemoved(_ path: String) -> Bool {
           path == item.path || path.hasPrefix(item.path + "/")
@@ -325,6 +365,7 @@ final class CleanerModel: ObservableObject {
     if !automatic {
       sounds.play(.cleanup(removed: result.removed, kept: max(result.kept, failures.count)))
     }
+    return result
   }
 
   private func sameScope(_ a: CleanerPreferences, _ b: CleanerPreferences) -> Bool {

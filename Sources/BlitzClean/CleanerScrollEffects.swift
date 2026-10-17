@@ -25,7 +25,6 @@ private struct CleanerScrollItem: ViewModifier {
       let edge = keepsStill ? 0 : fraction * fraction * (3 - 2 * fraction)
       return
         effect
-        .scaleEffect(1 - 0.045 * edge)
         .blur(radius: 1.4 * edge)
         .opacity(1 - 0.25 * edge)
     }

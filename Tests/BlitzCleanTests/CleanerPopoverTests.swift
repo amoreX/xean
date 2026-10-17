@@ -1,60 +1,44 @@
 import AppKit
+import SwiftUI
 import Testing
 
 @testable import BlitzClean
 
+@MainActor
 struct CleanerPopoverTests {
-  @Test func quitConfirmationKeepsTheSameTopEdgeAndIconAnchor() {
-    let screen = NSRect(x: 0, y: 0, width: 1_440, height: 876)
-    for x in [16.0, 700.0, 1_400.0] {
-      let anchor = NSRect(x: x, y: 876, width: 24, height: 24)
-      let cleaner = CleanerPopoverPlacement(anchor: anchor, visibleFrame: screen)
-      let confirmation = CleanerPopoverPlacement(
-        anchor: anchor, visibleFrame: screen,
-        contentHeight: CleanerPopoverPlacement.quitContentHeight)
-      #expect(confirmation.frame.maxY == cleaner.frame.maxY)
-      #expect(confirmation.frame.minX == cleaner.frame.minX)
-      #expect(confirmation.frame.width == cleaner.frame.width)
-      #expect(confirmation.frame.height == 72)
-      #expect(confirmation.pointerX == cleaner.pointerX)
-      #expect(screen.contains(confirmation.frame))
+  @Test func reopeningDuringDismissalKeepsTheNativePopoverVisible() async throws {
+    let window = NSWindow(
+      contentRect: NSRect(x: 200, y: 200, width: 500, height: 400),
+      styleMask: [.borderless], backing: .buffered, defer: false)
+    let anchor = NSView(frame: NSRect(x: 200, y: 350, width: 24, height: 24))
+    window.contentView?.addSubview(anchor)
+    window.orderFrontRegardless()
+    let popover = CleanerPopover()
+    var dismissals = 0
+    popover.didDismiss = { dismissals += 1 }
+    popover.behavior = .applicationDefined
+    popover.contentViewController = NSHostingController(rootView: Text("Fixture"))
+    popover.contentSize = NSSize(width: 200, height: 100)
+    defer {
+      popover.close()
+      window.orderOut(nil)
     }
-  }
-
-  @Test func centeredPointerMeetsMenuBarIcon() {
-    let anchor = NSRect(x: 1_190, y: 976, width: 24, height: 24)
-    let screen = NSRect(x: 0, y: 0, width: 1_920, height: 976)
-    let placement = CleanerPopoverPlacement(anchor: anchor, visibleFrame: screen)
-    #expect(placement.frame.midX == anchor.midX)
-    #expect(placement.pointerX == placement.frame.width / 2)
-    #expect(placement.frame.maxY == anchor.minY - 3)
-  }
-
-  @Test func screenEdgesKeepThePanelVisibleAndPointerOnTheIcon() {
-    let screen = NSRect(x: 0, y: 0, width: 1_440, height: 876)
-    for x in [16.0, 1_400.0] {
-      let anchor = NSRect(x: x, y: 876, width: 24, height: 24)
-      let placement = CleanerPopoverPlacement(anchor: anchor, visibleFrame: screen)
-      #expect(screen.contains(placement.frame))
-      #expect(placement.frame.minX + placement.pointerX == anchor.midX)
-    }
-  }
-
-  @Test func secondaryDisplayUsesItsOwnCoordinateSpace() {
-    let screen = NSRect(x: -1_920, y: 100, width: 1_920, height: 1_056)
-    let anchor = NSRect(x: -600, y: 1_156, width: 24, height: 24)
-    let placement = CleanerPopoverPlacement(anchor: anchor, visibleFrame: screen)
-    #expect(screen.contains(placement.frame))
-    #expect(placement.frame.midX == anchor.midX)
-    #expect(placement.frame.minX + placement.pointerX == anchor.midX)
-  }
-
-  @Test func shortDisplayKeepsTheFooterAboveItsLowerEdge() {
-    let screen = NSRect(x: 0, y: 48, width: 1_024, height: 552)
-    let anchor = NSRect(x: 700, y: 600, width: 24, height: 24)
-    let placement = CleanerPopoverPlacement(anchor: anchor, visibleFrame: screen)
-    #expect(screen.contains(placement.frame))
-    #expect(placement.frame.minY == screen.minY + 8)
-    #expect(placement.frame.maxY == anchor.minY - 3)
+    popover.updateAnchor(anchor.bounds)
+    #expect(popover.anchorRect == anchor.bounds)
+    #expect(!popover.isShown)
+    popover.present(relativeTo: popover.anchorRect, of: anchor)
+    popover.updateAnchor(anchor.bounds.insetBy(dx: 1, dy: 0))
+    #expect(popover.positioningRect == anchor.bounds.insetBy(dx: 1, dy: 0))
+    popover.dismissAnimated()
+    popover.present(relativeTo: anchor.bounds, of: anchor)
+    try await Task.sleep(for: .milliseconds(250))
+    #expect(dismissals == 0)
+    #expect(popover.isPresented)
+    #expect(popover.isShown)
+    #expect(popover.window?.alphaValue == 1)
+    popover.dismissAnimated()
+    try await Task.sleep(for: .milliseconds(250))
+    #expect(!popover.isShown)
+    #expect(dismissals == 1)
   }
 }

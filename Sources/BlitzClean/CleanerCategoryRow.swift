@@ -4,7 +4,7 @@ struct CleanerCategoryRow: View {
   @ObservedObject var model: CleanerModel
   let category: CleanerCategory
   @State private var expanded = false
-  private let colors = BlitzPalette.paper
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -21,7 +21,7 @@ struct CleanerCategoryRow: View {
               }
               model.sounds.play(.toggle)
             })
-        ).toggleStyle(BlitzCheckboxStyle(showsLabel: false)).frame(width: 18)
+        ).toggleStyle(.checkbox).labelsHidden().frame(width: 18)
           .disabled(model.isBusy)
         Button {
           if !expanded { model.prepareCategory(category) }
@@ -34,7 +34,7 @@ struct CleanerCategoryRow: View {
           HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
               Text(category.title).font(BlitzType.rowTitle)
-              Text(category.detail).font(BlitzType.caption).foregroundStyle(colors.secondaryText)
+              Text(category.detail).font(BlitzType.caption).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity, alignment: .leading)
             CleanerCategoryIndicator(
               expanded: expanded, loading: model.loadingCategory == category)
@@ -59,7 +59,7 @@ struct CleanerCategoryRow: View {
       } else {
         Text(model.stopRequested ? "Check stopped. Reopen to try again." : "Checking…")
           .font(BlitzType.caption)
-          .foregroundStyle(colors.secondaryText).cleanerScrollItem().transition(.identity)
+          .foregroundStyle(.secondary).cleanerScrollItem().transition(.identity)
       }
     }
   }
@@ -70,11 +70,17 @@ struct CleanerCategoryRow: View {
     return VStack(alignment: .leading, spacing: 8) {
       if items.isEmpty && kept.isEmpty {
         Text("No items 50 MB or larger.").font(BlitzType.caption)
-          .foregroundStyle(colors.secondaryText).cleanerScrollItem()
+          .foregroundStyle(.secondary).cleanerScrollItem()
       }
       VStack(alignment: .leading, spacing: 10) {
         ForEach(items) { item in
           CleanerInventoryItem(model: model, item: item).cleanerScrollItem()
+            .transition(
+              .asymmetric(
+                insertion: .identity,
+                removal: .modifier(
+                  active: CleanerRowCollapse(progress: 0), identity: CleanerRowCollapse(progress: 1)
+                )))
         }
         ForEach(kept) { item in
           VStack(alignment: .leading, spacing: 3) {
@@ -85,9 +91,9 @@ struct CleanerCategoryRow: View {
             }
             Text(CleanerInventoryItem.shortPath(item.path)).lineLimit(2).truncationMode(.middle)
             Text(item.reason)
-          }.font(BlitzType.caption).foregroundStyle(colors.secondaryText).cleanerScrollItem()
+          }.font(BlitzType.caption).foregroundStyle(.secondary).cleanerScrollItem()
         }
-      }
+      }.animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: items.map(\.id))
     }
   }
 
@@ -102,31 +108,49 @@ private struct CleanerCategoryIndicator: View {
     ZStack {
       Image(systemName: "chevron.right")
         .font(.system(size: 10, weight: .semibold))
-        .foregroundStyle(BlitzPalette.paper.secondaryText)
+        .foregroundStyle(.secondary)
         .rotationEffect(.degrees(expanded ? 90 : 0))
       if loading {
         ProgressView().controlSize(.mini).frame(width: 12, height: 12).offset(x: -16)
       }
     }.frame(width: 38)
-      .animation(reduceMotion ? nil : .smooth(duration: 0.4, extraBounce: 0), value: expanded)
+      .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: expanded)
   }
 }
 
 struct CleanerDisclosureReveal<Content: View>: View {
   let expanded: Bool
-  var revision: Date? = nil
-  @ViewBuilder let content: Content
+  let revision: Date?
+  let content: Content
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var mounted: Bool
+  @State private var progress: CGFloat
+
+  init(expanded: Bool, revision: Date? = nil, @ViewBuilder content: () -> Content) {
+    self.expanded = expanded
+    self.revision = revision
+    self.content = content()
+    _mounted = State(initialValue: expanded)
+    _progress = State(initialValue: expanded ? 1 : 0)
+  }
 
   var body: some View {
-    // Keep intrinsic layout stable while the visible height changes, including on a refresh.
-    CleanerDisclosureLayout(progress: expanded ? 1 : 0) { content }
-      .clipped()
-      .opacity(expanded ? 1 : 0)
-      .allowsHitTesting(expanded)
-      .accessibilityHidden(!expanded)
-      .animation(reduceMotion ? nil : .smooth(duration: 0.4, extraBounce: 0), value: expanded)
-      .animation(reduceMotion ? nil : .smooth(duration: 0.4, extraBounce: 0), value: revision)
+    CleanerDisclosureLayout(progress: progress) {
+      if mounted { content.transaction { $0.animation = nil } }
+    }
+    .clipped()
+    .allowsHitTesting(expanded)
+    .accessibilityHidden(!expanded)
+    .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: revision)
+    .onChange(of: expanded) { _, expanded in
+      if expanded { mounted = true }
+      withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18), completionCriteria: .removed) {
+        progress = expanded ? 1 : 0
+      } completion: {
+        // Unmount hidden native controls so they cannot retain focus or accessibility entries.
+        if progress == 0 { mounted = false }
+      }
+    }
   }
 }
 
@@ -155,7 +179,6 @@ private struct CleanerDisclosureLayout: Layout {
 private struct CleanerInventoryItem: View {
   @ObservedObject var model: CleanerModel
   let item: CleanerItem
-  private let colors = BlitzPalette.paper
 
   var body: some View {
     VStack(alignment: .leading, spacing: 5) {
@@ -164,32 +187,46 @@ private struct CleanerInventoryItem: View {
           Text(item.category == .docker ? "Unused build cache" : item.name)
             .font(BlitzType.body).lineLimit(2)
           if let branch = item.branch {
-            Text(branch).font(BlitzType.caption).foregroundStyle(colors.secondaryText)
+            Text(branch).font(BlitzType.caption).foregroundStyle(.secondary)
           }
           Text(Self.shortPath(item.path)).font(BlitzType.caption)
-            .foregroundStyle(colors.secondaryText).lineLimit(2).truncationMode(.middle)
+            .foregroundStyle(.secondary).lineLimit(2).truncationMode(.middle)
             .textSelection(.enabled)
         }.frame(maxWidth: .infinity, alignment: .leading)
         VStack(alignment: .trailing, spacing: 2) {
           Text(ByteText.compact(item.bytes)).font(BlitzType.caption).monospacedDigit()
-            .foregroundStyle(colors.secondaryText)
+            .foregroundStyle(.secondary)
           if model.removingItemID == item.id {
             ProgressView().controlSize(.mini).accessibilityLabel("Deleting \(item.name)")
           } else {
             Button("Delete", role: .destructive) { Task { await model.deleteItem(item) } }
-              .blitzButton(.quiet).controlSize(.small).disabled(model.isBusy)
+              .buttonStyle(.borderless).controlSize(.small).disabled(model.isBusy)
               .accessibilityLabel("Delete \(item.name)")
           }
         }
       }
       if let failure = model.itemFailures[item.id] {
         Text("Couldn’t delete: \(failure)").font(BlitzType.caption)
-          .foregroundStyle(colors.secondaryText).fixedSize(horizontal: false, vertical: true)
+          .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
       }
     }
   }
 
   static func shortPath(_ path: String) -> String {
     path.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
+  }
+}
+
+private struct CleanerRowCollapse: ViewModifier, Animatable {
+  nonisolated var progress: CGFloat
+  nonisolated var animatableData: CGFloat {
+    get { progress }
+    set { progress = newValue }
+  }
+
+  func body(content: Content) -> some View {
+    CleanerDisclosureLayout(progress: progress) {
+      content.transaction { $0.animation = nil }
+    }.clipped()
   }
 }
