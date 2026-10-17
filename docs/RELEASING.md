@@ -1,95 +1,68 @@
-# Releasing BlitzClean
+# Building and releasing xean
 
-## Prepare
+The public fork currently distributes source. It has no xean binary release or active automatic updater.
+Inherited packaging scripts still produce `BlitzClean.app` and use BlitzClean version/bundle identifiers.
+Do not describe local ad-hoc builds or inherited upstream releases as notarized xean downloads.
 
-1. Update `CFBundleShortVersionString` and increment `CFBundleVersion` in `support/Info.plist`.
-2. Update `CHANGELOG.md`, the README, and any affected architecture/privacy documentation.
-3. Run `./scripts/check.sh`, then verify the changed screens in the installed app.
-4. Review the exact files being committed; exclude local reports, credentials, screenshots with personal data, and builds.
-
-## Update signing key (once per Mac)
-
-Updates are signed with an EdDSA key kept in the login keychain, never in the repository or GitHub secrets.
+## Local development bundle
 
 ```sh
-./scripts/sparkle-key.sh
+./start.sh
+# After source changes, quit xean first:
+./start.sh --build
 ```
 
-The script creates the key under the keychain account `blitzreels-blitzclean` if it is missing and prints the
-public key. The private key is backed up in Infisical: BlitzReels project, `prod`, folder `/blitzclean`,
-secret `SPARKLE_PRIVATE_ED_KEY` (with `SPARKLE_PUBLIC_ED_KEY` beside it).
-
-Installed copies trust only this key. Losing it means every existing install has to download the next release
-by hand. To set up another Mac, restore it from Infisical into the keychain:
+The launcher defaults to ad-hoc signing and opens the app in `dist/`. To build without launching:
 
 ```sh
-infisical secrets get SPARKLE_PRIVATE_ED_KEY --projectId <BlitzReels project id> --env prod \
-  --path /blitzclean --plain --silent > /tmp/sparkle-key && chmod 600 /tmp/sparkle-key
-.build/artifacts/sparkle/Sparkle/bin/generate_keys --account blitzreels-blitzclean -f /tmp/sparkle-key
-rm /tmp/sparkle-key
+BLITZCLEAN_SIGNING_IDENTITY=- ./scripts/build-app.sh
 ```
 
-## Package a download
+The build script bundles SwiftPM resources, Cuelume sounds, the retained LiquidGlass resources, Sparkle,
+icons, and license notices, then verifies the signature. It explicitly stamps the installed SDK version
+into the executable so AppKit selects the correct native appearance, while retaining the macOS 14 runtime
+minimum. Build jobs default to two; `BLITZCLEAN_BUILD_JOBS` overrides this.
 
-Use a Developer ID Application identity installed in the login keychain.
-The packaging script builds both arm64 and x86_64, verifies the signature, and creates a ZIP and SHA-256 checksum.
+## Before an independent release
 
-```sh
-BLITZCLEAN_SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
-  ./scripts/package-release.sh
-```
+1. Run the relevant checks and `./scripts/check.sh`; inspect changed UI in the packaged app.
+2. Choose xean version/build numbers in `support/Info.plist` and document the exact commit and changes.
+3. Review bundle identity and stored-data migration. The current domain/data folder can be shared with
+   an upstream BlitzClean installation; an independent identity is still follow-up work.
+4. Use your own Developer ID identity and notarization credentials. Keep all secrets outside Git.
+5. Keep updates disabled. The current app does not instantiate Sparkle, and inherited release scripts
+   contain upstream feed, signing-account, and appcast URL defaults.
+6. Exclude local reports, generated binaries, secrets, and personal screenshots from the source commit.
 
-Outputs are `dist/BlitzClean-<version>-macOS.zip` and the matching `.zip.sha256` file.
-The script embeds the public update key and the feed URL in the app. When the build is notarized it also writes
-`dist/appcast.xml`, signed with the keychain key, with the version's `CHANGELOG.md` section as release notes.
-Rename `## Unreleased` to `## <version> - <date>` before packaging so the notes are found.
-`BLITZCLEAN_SKIP_UPDATES=1` packages a build without an updater.
-The app requires macOS 14+; local build concurrency defaults to two jobs.
+## Signed universal archive
 
-Signing alone does not notarize the app.
-Without a notarization profile, publish only as a clearly labeled preview and state that Gatekeeper may block it.
-
-## Notarize
-
-Configure an Apple notarization keychain profile outside the repository, then pass its name:
+The inherited packaging helper accepts a Developer ID identity and builds both `arm64` and `x86_64`.
+For this fork, explicitly skip inherited update signing:
 
 ```sh
+BLITZCLEAN_SKIP_UPDATES=1 \
 BLITZCLEAN_SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
 NOTARY_PROFILE='your-notarization-profile' \
   ./scripts/package-release.sh
 ```
 
-Alternatively, use an existing `asc` CLI authentication profile without exporting its credentials:
+Use a notarization keychain profile configured outside the repository. The script waits for acceptance,
+staples and validates the ticket, checks Gatekeeper, recreates the archive, and computes its SHA-256.
+Without a notarization profile, it creates a signed preview only; signing alone is not notarization.
 
-```sh
-BLITZCLEAN_SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
-BLITZCLEAN_ASC_PROFILE='your-asc-profile' \
-  ./scripts/package-release.sh
-```
+Current output names are `dist/BlitzClean-<version>-macOS.zip` and `.zip.sha256`. Retaining these names does
+not imply that upstream publishes or supports the fork. Never reuse upstream signing keys or publish an
+appcast pointing to upstream releases as an xean update channel.
 
-The script requires an Accepted result, staples and validates the ticket, checks Gatekeeper, and recreates the archive.
-The checksum is calculated after stapling; the submission receipt stays in ignored `dist/`.
+## Publishing checklist
 
-Never commit certificates, private keys, app-specific passwords, or notarization credentials.
-Do not disable Gatekeeper or remove quarantine as an installation workaround.
+Publish only after verifying the exact commit and artifacts. Create the release under
+[amoreX/xean](https://github.com/amoreX/xean/releases), attach the archive and checksum, and state the
+supported OS versions, architectures, signing/notarization status, and known limitations.
 
-## Publish and verify
+Download the published archive and verify its checksum, bundle version, architectures, signature, and
+stapled ticket. Test opening it on a separate Mac where possible. Use a prerelease for incomplete release
+validation. CI artifacts and local ad-hoc bundles are development builds, not verified public releases.
 
-Push the reviewed commit and confirm its GitHub checks pass.
-Tag that exact commit as `v<version>`, then create a GitHub release with the ZIP, checksum, `appcast.xml`, and
-version-specific release notes. The tag must match: the appcast points at
-`https://github.com/blitzreels/blitzclean/releases/download/v<version>/BlitzClean-<version>-macOS.zip`.
-
-Installed apps read `https://github.com/blitzreels/blitzclean/releases/latest/download/appcast.xml`, which always
-resolves to the newest non-prerelease release. Publishing the release is what ships the update, so upload
-`appcast.xml` last, after checking the ZIP downloads and its checksum matches. A prerelease is never offered.
-To pull a bad update, delete `appcast.xml` from that release or mark it as a prerelease.
-
-Use a prerelease for a build whose notarization or required release validation is incomplete.
-For a stable release, require a stapled ticket and successful Gatekeeper assessment.
-
-Download the published assets, verify the checksum, and inspect the extracted app's version, architectures, and signature.
-Record signing/notarization status and any known limits in the release notes, separately from test results.
-
-CI uses explicit ad-hoc signing because hosted runners have no developer certificate.
-Its downloadable build artifact is a development check, not the signed public release.
+An eventual updater needs xean-owned keys, feed URLs, release URLs, and explicit runtime integration.
+Document and test that separately before enabling it.

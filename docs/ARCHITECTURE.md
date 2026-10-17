@@ -1,167 +1,156 @@
-# Architecture
+# xean architecture
 
-BlitzClean is a SwiftPM macOS app. Its one external package is [Sparkle](https://github.com/sparkle-project/Sparkle),
-used by `AppUpdateController` for signed updates in release builds; development builds carry no feed key and never
-update themselves.
-The `BlitzClean` target in `Sources/BlitzClean` builds the executable; tests live in `Tests/BlitzCleanTests`.
+xean is a native SwiftUI/AppKit menu bar app built with Swift Package Manager. Its executable target is
+still named `BlitzClean`. The active app creates one status item and a native `NSPopover`; it does not
+create the inherited dashboard, process controllers, pressure monitor, or Sparkle updater.
 
-## Main experience
+## Runtime flow
 
-- `BlitzDashboardView`: one window for Overview, Memory, CPU, Storage, Revive apps, Projects, and Settings.
-- `BlitzStorageView`: Browse (the default), Inventory, and Cleanup, without nested tabs.
-- `FolderExplorerView` / `FolderExplorerModel`: clickable directory rows, navigation history,
-  asynchronous listings and recursive sizes, and reviewed Move to Trash.
-- `BlitzDesign`: shared buttons, search fields, and neutral selection controls matched to BlitzRecorder.
-- `BlitzTrayView`: compact live status and actions. Opening it never starts a disk scan.
-- `SystemMonitor`: two-second host CPU/VM samples; bounded CPU and memory histories.
-- `CPUProcessReader`: per-process CPU deltas from `proc_pid_rusage`, with process-start identity checks.
-- `MemoryControlView`: apps and AI sessions, direct normal Quit, inline Force Quit review, and pressure history.
-- `AppRecoveryModel`: current macOS app roster, expiring health checks, independent recovery, and recent crashes.
-- `QuickCleanModel` / `CacheCleaner`: bounded allowlist scan, age and activity checks, reviewed cache deletion.
-- `LargeFileReviewView`: persistent file review, media filters, and identity-checked Move to Trash.
-- `MediaDuplicateScanner`: size bucketing and streaming SHA-256, excluding hard links.
-- `MediaExportEngine`: isolated FFmpeg staging, stream checks, full output decode, and unique final names.
-- `MediaLibraryModel`: shared in-flight operations across navigation, with bounded export history.
+```mermaid
+flowchart TD
+    App[AppDelegate] --> Popover[CleanerPopover]
+    Popover --> View[CleanerView]
+    View --> Model[CleanerModel]
+    Model --> Driver[CleanerDriver]
+    Driver --> Scan[CleanerScanner]
+    Driver --> Safety[Cache, project, Git and Docker checks]
+    Model --> History[CleanupHistoryStore]
+    Model --> Result[CleanerCleanupView]
+    App --> Stats[CleanerMenuBarStats]
+    Stats --> Sampler[SystemMetricsProvider]
+    Stats --> Renderer[MenuBarLabelRenderer and CleanerMenuBarAnimator]
+```
 
-## Developer tools
+The diagram shows responsibilities; `CleanerModel` writes the cleanup ledger after a driver reports a
+successful removal. UI state stays on the main actor. Native scans and deletion checks run through utility
+tasks, with cancellation propagated to the scanner.
 
-Projects owns server/worker controls; Storage Cleanup owns worktrees, dependencies, Docker, and rebuildable data.
-Memory owns pressure history and AI sessions, while Storage Browse owns directory and large-file review.
+## App and presentation
 
-These tools share the dashboard instead of opening a separate developer window.
-Deeper scanners run on demand or under their own refresh policies.
+All source paths below are relative to [`Sources/BlitzClean`](../Sources/BlitzClean).
 
-## Safety boundaries
+| File / type | Role |
+| --- | --- |
+| `Entry.swift` | Entry point and inherited preference migration |
+| `BlitzCleanApp.swift` / `AppDelegate` | Accessory app lifetime, status item, native menu, outside-click handling, and keyboard routing |
+| `CleanerPopover.swift` | AppKit-owned material, border, arrow, shadow, placement, 180 ms fade, and compact Quit height |
+| `CleanerView.swift` | Header, auto-clean/low-space inputs, category selection, stats settings, login switch, footer, and confirmations |
+| `CleanerControls.swift` | Native `.glass` / `.glassProminent` on macOS 26+, bordered fallbacks, and aligned native switches |
+| `CleanerCategoryRow.swift` | Category inventory and direct Delete; `CleanerDisclosureReveal` clips animated height without animating text |
+| `CleanerCleanupView.swift` | Scanning, deletion queue, successful, empty, and partial outcomes |
+| `CleanerScrollEffects.swift` | Edge blur/fade and accessibility adjustments |
+| `CleanerScrollBehavior.swift` | 180 ms easing for mouse-wheel steps; native trackpad momentum |
+| `CleanerSounds.swift` | Bundled WAV playback through AVAudioPlayer, one voice, 70% volume, active-app gating |
+| `LaunchAtLoginController.swift` | `SMAppService.mainApp` registration and error reporting |
 
-Cache trees are fingerprinted from file identity, size, type, and modification metadata.
-Symlinks and special files are rejected. The exact direct-child target, internal volume,
-running owner tools, open files, and the fingerprint are checked again before deletion.
-A failed or incomplete check preserves the candidate and produces a visible explanation.
-A small filesystem race remains between final validation and removal. Deletion runs as the current user,
-without privileges or hardening against a deliberate attacker.
+Popover content is 420 × 580 points, shortened for smaller screens. Quit uses 64 points of content height.
+The eraser anchors the panel. Stats expand to its left. Dismissal clears transient state only after the
+window closes; a generation check prevents a stale close completion from dismissing a reopened panel.
 
-Personal-file review rechecks inode, device, size, nanosecond modification time, and allowed roots.
-Storage Browse and its largest-file review use Trash. Separate developer workflows keep their reviewed deletion policies.
+## State and operations
 
-RAM release revalidates PID, bundle identity, launch date, protection policy, and foreground activity.
-It sends a normal quit request, waits for the app, respects save dialogs, and samples actual available RAM.
-No memory-pressure allocation tricks or forced purges are implemented.
+`CleanerModel` owns preferences, free disk space, category snapshots, busy state, individual failures,
+background scheduling, the last persisted outcome, and the current `CleanerCleanup` presentation.
+`CleanerDriver` separates native file operations from fixture-backed tests.
 
-## Persistence
+### Manual Clean
 
-Local files live in `~/Library/Application Support/BlitzClean`, built through `AppData`.
-On launch, `AppData.migrateLegacyFiles` moves files from the pre-1.2.0 `~/Library/Application Support/FreeSpace`
-folder without overwriting existing ones, and cleanup reports are still imported from that folder's `reports`.
-`BrandMigration` copies selected preferences once from the legacy `fr.algomax.FreeSpace` domain to
-`com.blitzreels.BlitzClean`.
-Navigation and selected storage tab use UserDefaults. File review is an atomic JSON snapshot
-beside the cleanup ledger (8 MiB / 5,000 files maximum), with filters saved separately.
-The chart store keeps two-second samples for 15 minutes and five-minute points for seven days.
-It is capped at 512 KiB, and the week-long chart is reduced to about 450 visible points.
-Export history keeps at most 100 entries / 512 KiB. Incident history retains at most 1,440 events
-from the last 24 hours; cleanup history keeps 1,000 records. JSON files use owner-only permissions.
-No local incident log, preference export, build artifact, or machine screenshot belongs in Git.
+1. Capture the selected scope and create a unique cleanup presentation ID.
+2. Reuse completed manual category scans at most 30 seconds old; scan missing or expired categories.
+3. Consolidate candidates, deduplicating paths and excluding descendants of a selected worktree.
+4. Revalidate and remove each candidate through the native driver.
+5. Record each success, invalidate matching inventory paths, and publish its removed ID. The view collapses
+   that row only after removal succeeds. Failed entries keep their reason.
+6. Present the measured outcome after the final collapse. Empty and partial results have distinct states.
 
-## Media processing
+Closing the panel clears its presentation ID, not the underlying operation. Completion cannot restore an
+old result into a newly opened panel. Individual Delete uses the same removal pipeline with a single
+category, even if that category is unchecked for bulk cleanup; it uses brief footer feedback instead.
 
-The legacy narrow scanner remains for existing cleanup callers. Largest files uses `DriveFileScanner`: native
-FTS metadata traversal with physical paths, no symlink following, and one filesystem per explicit root. Boot system
-and Data roots are included separately; mounted external local drives are included. A single utility worker
-round-robins roots in 2,048-entry batches and publishes at most about every 750 ms. A min-heap retains the largest
-5,000 files in bounded memory. Scans are cancellable, include hidden/package/dependency trees, and report unreadable
-locations. There is no 20-second or 80,000-entry cutoff in this mode. Stale/empty legacy snapshots migrate to the
-new all-drive scope; nonempty snapshots are refreshed after an hour. Large saved lists revalidate off the main actor.
+### Automatic cleanup
 
-Content comparison is cancellable, reads 1 MiB chunks, and stops after two minutes.
-The selected file's identity is checked before and after hashing. It detects exact copies only;
-visually similar edits and separately encoded versions of a recording do not match.
+A task checks whether work is due every minute. The configured background interval is fixed at 25 minutes,
+with the last check persisted across launches. Auto-clean requires explicit opt-in and a valid disk reading
+below its own threshold. It always uses a fresh scan with automatic age rules, then checks free space again
+before deletion. It does not open a progress or result screen. Warning badges use the independent warning
+threshold and never invoke the notification framework.
 
-FFmpeg and FFprobe are discovered in Homebrew or standard binary locations, with no automatic installation.
-Inputs must pass identity and open-file checks. Each export uses its own hidden staging directory,
-keeps originals, limits codec threads, checks free space, and terminates on cancellation or app quit.
-Successful exports pass stream/duration checks and a complete decode before moving to a unique name.
-SDR MP4 uses H.264 CRF 23 and AAC; image choices are JPEG quality 2 or lossless PNG.
-Joining uses FFmpeg's [concat demuxer](https://ffmpeg.org/ffmpeg-formats.html#concat)
-with matching stream signatures and controlled relative manifest entries. Mixed formats are rejected.
-Completed jobs persist; interrupted encoding jobs are not resumed.
+## Scanning and removal services
 
-## Verification
+| Component | Responsibility |
+| --- | --- |
+| `CleanerPolicy.swift` | Category catalog, supported cache roots, default project roots, normalized thresholds and age settings |
+| `CleanerScan.swift` | `CleanerItem`, `CleanerKeptItem`, `CleanerScan`, `NativeCleanerDriver`, scanner, and project safety checks |
+| `QuickClean.swift` / `CacheCleaner` | Allowlisted cache traversal, tree fingerprinting, identity/activity/age revalidation, and removal |
+| `DeveloperArtifacts.swift` | Project, dependency, and build-output discovery |
+| `DeveloperArtifactCleanup.swift` | Dependency and worktree validation and removal |
+| `GitWorktrees.swift` | Local checkout identity, branch/merge status, dirty/ignored files, locks, and primary-checkout protection |
+| `DockerStorage.swift` | Verified local Docker endpoint, inspection, and unused builder-cache pruning |
+| `CleanupHistory.swift` | Volume measurements, recorded removals, file locking, and bounded atomic ledger writes |
 
-`./scripts/check.sh` builds/typechecks, runs Swift Testing suites, lints Swift,
-validates property lists, and checks shell syntax.
-`./scripts/build-app.sh` produces and verifies a release app bundle.
-`./scripts/package-release.sh` builds both Mac architectures and packages a Developer ID signed archive,
-with optional notarization and a checksum; see [Releasing](RELEASING.md).
-`./script/build_and_run.sh --verify` installs, launches, and verifies the process.
+Cleaner filesystem traversal has no arbitrary entry, depth, project-count, or elapsed-time cap. It uses
+cancellable depth-first traversal and prunes generated directories during project discovery. This is not
+an exhaustive search of every folder on every mounted disk. External commands retain hang timeouts.
 
-Tests exercise CPU deltas and PID reuse, bounded histories, launch routing, cache identity,
-symlink refusal, recent/open-file protection, successful fixture deletion, app protection,
-worktree/dependency safety, and the existing developer features.
+Root symlinks are protected. Nested package links are fingerprinted and removed as links without walking
+their destinations. Unreadable trees, special files, failed activity checks, and identity changes keep the
+candidate. [The user guide](CLEANER.md#cleanup-rules) specifies manual versus automatic age policies.
+A small race remains between final validation and filesystem removal; the implementation is not a security
+boundary against a hostile process changing the same tree.
 
-## Pressure prevention
+## Menu bar metrics
 
-`PressureSentinel` samples memory pressure, compression, swap, real free disk capacity and CPU every two seconds
-on a serial queue independent of SwiftUI. It identifies the limiting resource, forecasts a shrinking disk reserve,
-and posts rate-limited notifications through the existing notification permission. It runs inside the app,
-so it stops during a kernel stall, suspension, or app termination.
+`CleanerMenuBarStats` owns the enabled state, metric selection, memory display format, and two-second timer.
+It samples `SystemMetricsProvider` without starting `SystemMonitor`'s historical dashboard machinery.
+`MenuBarLabelRenderer` retains the inherited icons and typography. `CleanerMenuBarAnimator` animates width
+and visibility for 180 ms with the eraser at the trailing edge. Disabling stats cancels their timer and
+clears their snapshot. The cleaner continues its independent disk-space checks.
 
-`DevProcessScanner` reads working directories with `proc_pidinfo`, uses bounded three-second process/port commands,
-and resolves project ancestry off the main actor. The UI reuses the resulting directory map and groups workers
-without listening ports with their project. Scans expose incomplete results instead of claiming full coverage.
+## Compatibility names
 
-`LeftoverProcessFinder` reads the same snapshot for processes parented to launchd that it does not manage.
-It needs no extra process reads; it runs `launchctl list` (three-second limit) only when there are candidates,
-and shows nothing when that command fails. `LeftoverProcessStopper` checks the start identity, executable,
-owner, launchd parent, and Keep running policy again immediately before it sends SIGTERM or SIGKILL.
+| Identifier | Current value / contents |
+| --- | --- |
+| SwiftPM package, target, and executable | `BlitzClean` |
+| Packaged app | `dist/BlitzClean.app` |
+| Bundle / preference domain | `com.blitzreels.BlitzClean` |
+| Local data directory | `~/Library/Application Support/BlitzClean` |
+| `cleaner.preferences.v1` | Categories, auto/warning modes and thresholds, worktree age, preserved custom roots |
+| `cleaner.lastCheck` | Background scheduling timestamp |
+| `cleaner.lastOutcome` | Most recent cleanup count, measured bytes, kept count, and observed free-space gain |
+| `cleaner.showMenuBarStats` and shared menu bar keys | Enabled metrics and memory format |
+| `cleanup-history.json` | Up to 1,000 removal records; atomic writes and owner-only permissions |
 
-Projects offer Pause/Resume and a per-project opt-in for automatic pausing after sustained pressure.
-Automatic actions use a recent identity-checked process snapshot, protect Keep running projects and AI/tool sessions,
-and pause at most one eligible project per 30 seconds. Pause sends SIGSTOP to the eligible project runtimes;
-it prevents further CPU work but does not release their existing RAM. Resume is always explicit.
-The guard never automatically kills apps or deletes data. A stopped project can be resumed from Projects after relaunch.
+These names preserve compatibility with inherited data. xean and an installed BlitzClean build can share
+preferences and history; they are not isolated app identities yet. `BrandMigration` retains the older
+`fr.algomax.FreeSpace` preference migration. `AppData` supplies paths and legacy file-migration helpers.
+See [Privacy](PRIVACY.md) for what the active cleaner reads and stores.
 
-`pressure-latest.json` retains up to 240 pressure samples/actions and top project summaries across app restarts,
-with owner-only permissions and no process arguments or credentials. This local incident trace survives the app UI
-becoming busy; it cannot prove which process caused a kernel panic. macOS crash reports remain the authority.
+## Dependencies and retained code
 
-Individual Quit/Stop actions run without a BlitzClean confirmation. Native application save dialogs still appear.
-Manual project Stop validates PID, owner, start identity, executable, snapshot age, and Keep running protection;
-it sends SIGTERM and resumes stopped workers to deliver that signal. It never escalates to SIGKILL automatically.
-Auto-pause remains opt-in and never invokes Stop.
+| Dependency | Use |
+| --- | --- |
+| SwiftUI, AppKit, Foundation, Combine | UI, lifecycle, state, and local filesystem work |
+| ServiceManagement | Start at login |
+| AVFoundation | Native playback of bundled Cuelume cues |
+| Sparkle | Inherited SwiftPM framework; updater is not instantiated by xean |
+| LiquidGlass | Pinned SwiftPM package used by retained shared views; the active cleaner uses native controls |
+| Cuelume | Eight pre-rendered WAV assets; no JavaScript runtime in the app |
 
-## Live app recovery
+[`Package.swift`](../Package.swift) and `Package.resolved` define the actual dependency versions.
+Older `BlitzDashboardView`, recovery, process-control, media, and storage-browser components remain for
+upstream code compatibility and tests. Their presence does not make them xean features.
 
-The recovery view merges the current NSWorkspace roster with matching cached memory measurements.
-An app is actionable before RAM scanning finishes; launch/exit notifications and a two-second loop refresh the roster.
+## Build and verification map
 
-Health checks expire after two seconds, with at most eight concurrent window probes.
-Each Accessibility message times out after 0.5 seconds; two failed observations are required for an unresponsive result.
+| Path | Purpose |
+| --- | --- |
+| [`start.sh`](../start.sh) | Build on first launch, open the local app, explicit `--build` for changes |
+| [`scripts/build-app.sh`](../scripts/build-app.sh) | Release build, SDK linker stamp, resource/framework bundling, and code signing |
+| [`scripts/check.sh`](../scripts/check.sh) | Build, serial tests, Swift formatting, plist validation, and shell syntax |
+| [`Tests/BlitzCleanTests`](../Tests/BlitzCleanTests) | Cleaner policy/model, large trees, symlinks, inventory, menu bar, popover, sounds, and fixture renders, plus inherited suites |
+| [`support`](../support) | Bundle metadata and entitlements |
+| [`assets/brand`](../assets/brand) | Retained bundle artwork and icon sources |
+| [`licenses`](../licenses) | Preserved third-party notices |
 
-Native identity validation uses the PID, owner, launch identity, and bundle before sending SIGCONT.
-Resume and termination use separate eligibility rules. Built-in user apps are available for resume; their
-existing Quit and Force Quit protections remain intact, and core macOS services stay excluded.
-Recovery verifies the result within a bounded observation loop and never restarts a responsive app.
-
-New health supersedes conflicting recovery results, and a completed attempt does not impose a retry lock.
-Crash-report discovery is throttled to at most once per 30 seconds; the per-app Force Quit path keeps its inline review.
-
-## Storage scan scopes and profiling
-
-Overview and Cleanup use the cleanup scope. The full inventory is requested by Inventory only, with its own
-freshness timestamp; an inventory request made during a cleanup scan is queued. Cleanup merges its measured
-categories into the cached inventory instead of dropping untouched inventory sections.
-`DependencyFileScan` discovers folders with native FTS traversal, prunes nested dependencies, and removes
-redundant scan roots. At most four workers collect allocated and apparent sizes together, deduplicating hard links
-within each target and never following symlinks. Unreadable targets are excluded from measured cleanup results.
-Project activity traversal skips generated trees and returns Unknown on budget exhaustion or read failure.
-`PerformanceBenchmarks` is an opt-in read-only harness; see [Performance](PERFORMANCE.md) for commands and results.
-
-## Dashboard audit
-
-`DashboardAuditModel` owns the user-triggered audit in `BlitzDashboardView`, so leaving Overview does not restart
-or lose work. It coordinates existing scanners without adding background polling when idle, publishes each
-completed check separately, and rejects overlapping audits. `AuditProgress` keeps unavailable and incomplete
-checks explicit. `AuditFindings` derives ranked, typed actions; previous-run values are gated on check completion.
-`OverviewCleanCard` renders the initial, checking, finding, quiet, and cleanup-result states from one presentation.
-`StorageCleanupFocus` routes a recommendation to its owning cleanup section. Cache removal still goes through
-`QuickCleanModel`; the dashboard retains its outcome while rechecking the Mac and refreshing disk measurements.
+See [Contributing](../CONTRIBUTING.md) for focused checks, [Design](DESIGN.md) for UI rules, and
+[Releasing](RELEASING.md) before distributing binaries.

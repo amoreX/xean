@@ -1,126 +1,29 @@
-<p align="center"><img src="assets/brand/app-icon.png" width="112" alt="BlitzClean icon"></p>
-<h1 align="center">BlitzClean</h1>
-
-**Cleaner fork:** this workspace launches as a single menu bar cleaner icon. Click it for selectable
-Claude Code, Codex, Superconductor, editor, package, browser, Docker, build, dependency and worktree cleanup.
-Enable a red low-space warning or opt into Auto-clean below a free-space threshold, without notification permissions.
-Expand each category to inspect and delete individual items; set the worktree age for automatic cleanup.
-The interface uses a native macOS popover, system controls and Liquid Glass on macOS 26 or newer,
-plus local [Cuelume](https://cuelume.dev) sound cues at 70% volume. Cleanup entries collapse as they are
-removed, followed by a result screen that clears when the panel closes.
-See [the cleaner guide](docs/CLEANER.md) for scope, protections and build instructions. The upstream overview
-below describes the original monitoring app, whose dashboard is no longer launched by this fork.
-
+<h1 align="center">xean</h1>
+<p align="center">A small macOS menu bar cleaner for developer caches, build files, and old worktrees.</p>
+<p align="center">Native SwiftUI + AppKit · Liquid Glass on macOS 26+ · Free and open source</p>
 <p align="center">
-  See what is slowing your Mac down, and fix it from the menu bar.<br>
-  An open-source resource monitor and careful storage cleaner, built by <a href="https://blitzreels.com">BlitzReels</a>.<br>
-  Free on macOS 14 or later. No account, no subscription, no telemetry.
+  <a href="#get-started">Get started</a> ·
+  <a href="docs/CLEANER.md">User guide</a> ·
+  <a href="docs/ARCHITECTURE.md">Components</a> ·
+  <a href="CONTRIBUTING.md">Contribute</a> ·
+  <a href="LICENSE">MIT license</a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/blitzreels/blitzclean/releases/latest">Download for macOS</a>
-  · <a href="docs/FEATURES.md">Features</a>
-  · <a href="docs/ARCHITECTURE.md">Architecture</a>
-  · <a href="CONTRIBUTING.md">Contribute</a>
-  · <a href="CHANGELOG.md">Release notes</a>
-</p>
+xean lives behind an eraser in your menu bar. Choose what to clean, inspect individual folders if you want,
+and press **Clean**. Entries collapse as they are removed, followed by a result showing what was cleaned
+and what was kept. Close the panel to return to a fresh view next time.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white" alt="macOS 14+">
-  <img src="https://img.shields.io/badge/Swift-native-F05138?logo=swift&logoColor=white" alt="Native Swift app">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-30D49B" alt="License: MIT"></a>
-  <a href="https://github.com/blitzreels/blitzclean/actions/workflows/ci.yml"><img src="https://github.com/blitzreels/blitzclean/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-</p>
+Optional CPU, memory, and disk stats sit to the **left** of the eraser, keeping the cleaner anchored as
+stats appear and disappear. Everything runs locally, with no account, subscription, or telemetry.
 
-![BlitzClean Overview: storage, memory, and CPU with a pressure warning](.github/assets/readme/overview.png)
+xean is a fork of [BlitzClean](https://github.com/blitzreels/blitzclean), focused on a single cleanup panel.
+The upstream dashboard is not part of xean's interface.
 
-BlitzClean is for developers and creators whose Macs fill up with builds, caches, simulators, AI agents,
-and dev servers. It shows CPU, memory, and free disk space in the menu bar, tells you which one is the
-bottleneck, and gives you one window to act: quit or pause what is using memory, revive frozen apps,
-and remove data that tools rebuild on their own.
+## Get started
 
-Nothing leaves your Mac. Overview offers one-click cleanup of eligible rebuildable caches;
-other removals are reviewed first, and personal files go to the Trash.
-
-## What you can do
-
-- Clean old, rebuildable caches from Overview with one click, with activity checks, animated progress,
-  and a result showing removed cache bytes separately from the change in free disk space.
-- See the limiting resource at a glance. The menu bar shows live numbers, and a warning names what is short
-  (memory, swap, disk reserve, or CPU) with one instruction.
-- Free memory by ranking apps and AI sessions such as Claude Code, Codex, and Cursor by RAM, then pausing,
-  resuming, or quitting them. Whole projects can be stopped along with their dev servers.
-- Inspect individual process footprints in Memory → Processes, sorted by RAM and searchable by name, owner,
-  project path, or PID. Restricted measurements stay marked as unavailable.
-- Revive apps that stopped or froze, and see whether each one actually recovered.
-- Find leftover processes in Projects, with their RAM, CPU, folder, and uptime. Quit one directly;
-  Force Quit and Quit all ask first. AI sessions and protected projects keep their existing controls.
-- Find what fills your disk by browsing every drive with folder sizes, or by ranking the largest files.
-- Review caches, `node_modules`, build output, simulators, Docker, and merged worktrees before removing them,
-  and see when removed folders grow back.
-- Reduce supported System Data in Storage → Cleanup: eligible browser and developer caches, plus crash and
-  hang reports older than 30 days. Reports require explicit selection and review.
-- Filter large videos and images, find exact duplicates, and make smaller copies with FFmpeg.
-
-<table>
-  <tr>
-    <td width="300" valign="top">
-      <img src=".github/assets/readme/tray.png" width="300" alt="BlitzClean menu bar panel">
-    </td>
-    <td valign="top">
-      <h3>Always in the menu bar</h3>
-      <p>
-        Memory, CPU, and storage at a glance, the apps using the most memory, and a warning only when
-        something needs you. Closing the dashboard keeps monitoring on; quit from the panel's gear menu.
-      </p>
-      <p>
-        Choose what the menu bar shows in Settings: available memory, used memory, or a percentage.
-      </p>
-    </td>
-  </tr>
-</table>
-
-## Try it on your Mac
-
-1. [Download the latest release][releases], unzip it, and move `BlitzClean.app` to Applications.
-2. Open BlitzClean. It appears in the menu bar; click it and choose Open dashboard.
-3. In Settings > Finish setup, allow the permissions you want:
-   Notifications for warnings, Accessibility for frozen-window checks, Full Disk Access for protected folders.
-   Every permission is optional, and the section disappears once all are granted.
-
-Releases support Apple silicon and Intel Macs on macOS 14 or later.
-Each download is Developer ID signed, notarized by Apple, and published with a SHA-256 checksum.
-
-From 1.3.0, BlitzClean updates itself with [Sparkle](https://sparkle-project.org): it checks once a day,
-downloads a signed update in the background, and offers Restart to update in the menu bar panel and Settings.
-Version 1.2.0 and earlier have no updater; download 1.3.0 once by hand and later versions arrive automatically.
-
-## Safety
-
-- Scans never delete anything. Overview's Clean button explicitly removes all eligible known caches;
-  Storage offers individual selection and inline review for other removals.
-- Personal files and folders go to the Trash. BlitzClean never empties the Trash for you.
-- Rebuildable data (caches, dependencies, build output) and explicitly reviewed old diagnostic reports can
-  be permanently deleted. Dependencies, build output, and reports keep their separate review flows.
-- Running tools, open files, recent changes, and protected paths block removal.
-- Process identity is checked again right before Quit, Pause, or Force Quit.
-  Force Quit and bulk actions always ask first; nothing is force-quit automatically.
-- No memory purge commands, no synthetic memory pressure, no background deletion.
-
-The full rules are in [Features → Removal and process rules](docs/FEATURES.md#removal-and-process-rules).
-
-## Privacy
-
-BlitzClean runs entirely on your Mac: no account, cloud service, analytics, or telemetry SDK.
-The only network request is the daily update check, which fetches the release feed from GitHub and sends the
-app's version in its user agent. Turn it off in Settings > Updates.
-Charts, scan results, and the removal log stay in `~/Library/Application Support/BlitzClean`, each with a size limit.
-Saved history never includes conversation contents, window text, environment variables, or process arguments.
-See [Privacy and permissions](docs/PRIVACY.md) for exactly what is read and stored.
-
-## Build from source
-
-Requires macOS 14+ and Xcode 26 or newer for the native Liquid Glass APIs.
+**Run:** macOS 14 or later. **Build:** full Xcode 26 or newer, with its command-line tools selected.
+Native Liquid Glass buttons require macOS 26 or newer; earlier systems use standard bordered controls.
+The repository is distributed as source; there is no xean binary release yet.
 
 ```sh
 git clone https://github.com/amoreX/xean.git
@@ -128,61 +31,130 @@ cd xean
 ./start.sh
 ```
 
-`start.sh` builds `dist/BlitzClean.app` on the first run, then opens the cleaner panel. Later runs
-reuse that app. It stays in this checkout and uses ad-hoc signing by default; an Apple Developer
-account is not required. Set `BLITZCLEAN_SIGNING_IDENTITY` to use your own signing identity.
+The launcher builds `dist/BlitzClean.app` on first run and opens the cleaner. Later runs reuse the built app.
+It uses local ad-hoc signing by default, so you do not need an Apple Developer account. It leaves the app
+inside the checkout and does not install over an existing copy in Applications.
 
-After source changes, quit xean and rebuild:
+After changing the source, **quit xean**, then rebuild:
 
 ```sh
 ./start.sh --build
 ```
 
-The launcher can be called from any directory. It does not interrupt a running cleanup to rebuild.
+Run `./start.sh --help` for launcher usage. It works from any directory and refuses to rebuild over a
+running app. The first build downloads SwiftPM dependencies; subsequent launches use the local bundle.
 
-### Checks
+The executable, bundle, preference domain, and source target still use the inherited **BlitzClean** name.
+You may see that name in Finder or macOS settings. See [compatibility names](docs/ARCHITECTURE.md#compatibility-names)
+for the exact paths.
+
+## What it cleans
+
+| Category | Supported data |
+| --- | --- |
+| Claude Code | CLI and Claude desktop caches |
+| Codex | Desktop and renderer caches; sessions stay |
+| Superconductor | Desktop and web caches |
+| Coding editors | Cursor, VS Code, Windsurf, and Zed caches |
+| Package caches | npm, Yarn, pip, uv, Bun, and Homebrew download caches |
+| Browser caches | Supported Safari, Chrome, and Firefox caches |
+| Build files | Xcode DerivedData and supported Swift, Rust, and web build output |
+| Project dependencies | Inactive `node_modules` with a reinstall lockfile |
+| Docker build cache | Unused local builder cache; images, containers, and volumes stay |
+| Old worktrees | Eligible clean, merged, inactive Git-linked checkouts; branches stay |
+
+Claude Code, Codex, Superconductor, coding editors, package caches, and build files are selected by default.
+Browsers, dependencies, Docker, and worktrees are opt-in. Existing preferences are preserved.
+
+**Clean and individual Delete actions permanently remove eligible data immediately, without a second
+confirmation.** Manual cleanup has no age cutoff. Active tools, open files, protected locations, and items
+that changed after scanning remain protected. See [cleanup rules](docs/CLEANER.md#cleanup-rules).
+
+## One panel, a few controls
+
+- **Inspect a category.** Click its title or chevron to open the list. Items show a name, path, size, and
+  Delete action, or a reason they are protected. Worktrees also show their branch.
+- **Reuse recent scans.** Completed category scans are cached for 30 seconds. Expired or invalidated results
+  disappear before a fresh scan starts. No refresh button, and no entry-count limit on cleaner traversal.
+- **Keep lists useful.** Category dropdowns show measured entries of at least 50 MB. This is a display
+  filter: bulk Clean can also remove smaller eligible items.
+- **Auto-clean when space is low.** Set its GB threshold and opt in once. Checks run every 25 minutes while
+  xean is running, using age rules for automatic deletion.
+- **Show a low-space warning.** “Notify when low” has its own threshold and adds a red exclamation badge.
+  It does not send macOS notifications or ask for notification permission.
+- **Choose your stats.** Enable CPU, memory, disk, or just one. Memory can show available GB, used GB,
+  or used percentage. Turning stats off stops their two-second sampler.
+- **Start at login.** Enable the native login switch if you want xean available after signing in.
+
+Auto-clean and low-space warnings start off. Their independent thresholds default to 20 GB and remain
+editable beside their switches. [The user guide](docs/CLEANER.md) covers timing, defaults, and protected items.
+
+## Native macOS UI
+
+AppKit owns the popover's translucent background, border, pointer, and shadow. SwiftUI supplies native
+switches, checkboxes, numeric fields, and segmented controls. On macOS 26+, actions use native Liquid Glass
+button styles. The panel follows the system's light or dark appearance.
+
+The header and Clean button stay fixed while content scrolls through a soft edge blur. Custom transitions
+take 180 ms: disclosures and removed entries animate their height without moving or revealing individual
+letters. Reduce Motion disables custom motion; accessibility settings also adjust the scroll effects.
+Local [Cuelume](https://cuelume.dev) sounds accompany interactions and results. Opening, closing, and
+background cleanup are silent.
+
+Click outside, press Escape or ⌘W, or click the eraser again to close the panel. Closing during cleanup
+keeps the operation running. The power icon or ⌘Q opens a compact inline Quit confirmation.
+
+## Components
+
+The active app is organized around a small set of components in [Sources/BlitzClean](Sources/BlitzClean):
+
+| Component | Responsibility |
+| --- | --- |
+| [`BlitzCleanApp`](Sources/BlitzClean/BlitzCleanApp.swift) | Menu bar item, app lifetime, popover anchoring, and keyboard actions |
+| [`CleanerPopover`](Sources/BlitzClean/CleanerPopover.swift) | Native popover presentation, resizing, and dismissal |
+| [`CleanerView`](Sources/BlitzClean/CleanerView.swift) | Main panel, thresholds, category selection, settings, and inline confirmations |
+| [`CleanerCategoryRow`](Sources/BlitzClean/CleanerCategoryRow.swift) | Expandable inventory, individual deletion, and height-only transitions |
+| [`CleanerCleanupView`](Sources/BlitzClean/CleanerCleanupView.swift) | Scan progress, removal queue, success, empty, and partial results |
+| [`CleanerModel`](Sources/BlitzClean/CleanerModel.swift) | State, scan caching, background checks, cleanup sequencing, and result lifetime |
+| [`CleanerPolicy`](Sources/BlitzClean/CleanerPolicy.swift) | Categories, cache allowlist, preferences, defaults, and thresholds |
+| [`CleanerScan`](Sources/BlitzClean/CleanerScan.swift) | Scan/driver types, project discovery, candidate consolidation, and deletion routing |
+| [`CleanerMenuBarStats`](Sources/BlitzClean/CleanerMenuBarStats.swift) | Optional CPU, memory, and disk sampling and display preferences |
+| [`CleanerControls`](Sources/BlitzClean/CleanerControls.swift) | Native glass button styles and aligned switch rows |
+
+[Architecture](docs/ARCHITECTURE.md) maps the shared safety services, scroll effects, renderer, sound assets,
+persistence, dependencies, and test suites. Older dashboard code remains in the repository but is not
+instantiated by xean.
+
+## Development
 
 ```sh
-./scripts/check.sh        # build, tests, swift-format lint, plist and shell checks
-./scripts/build-app.sh    # package the app bundle
-BLITZCLEAN_DESIGN_DIR=/tmp/shots swift test --filter DesignRenderTests   # render every screen
+# Focused cleaner tests, including fixtures and popover behavior
+swift test --no-parallel -j 2 --filter Cleaner
+
+# Full repository checks, including retained upstream suites
+./scripts/check.sh
 ```
 
-Media tests need FFmpeg (`brew install ffmpeg`).
-See [Releasing](docs/RELEASING.md) for universal packaging, signing, notarization, and checksums.
+Full media integration tests require FFmpeg/FFprobe (`brew install ffmpeg`); the cleaner itself does not.
+Test deletion only against disposable fixtures. See [Contributing](CONTRIBUTING.md) for UI verification,
+formatting, and changes to cleanup policy. [Releasing](docs/RELEASING.md) covers local packaging and the
+remaining work for independent xean releases.
 
-## Repository map
+## Documentation
 
-| Path | What lives there |
+| Guide | Contents |
 | --- | --- |
-| [Sources/BlitzClean](Sources/BlitzClean) | The app: monitoring, memory and process control, storage scans, cleanup, and UI |
-| [Tests/BlitzCleanTests](Tests/BlitzCleanTests) | Unit, integration, and screenshot render tests |
-| [docs](docs) | [Features](docs/FEATURES.md), [architecture](docs/ARCHITECTURE.md), [design rules](docs/DESIGN.md), [privacy](docs/PRIVACY.md), [releasing](docs/RELEASING.md), [roadmap](docs/ROADMAP.md) |
-| [script](script), [scripts](scripts) | Build-and-run, checks, packaging, and release scripts |
-| [support](support) | `Info.plist` and entitlements |
-| [assets](assets) | App icon and brand files |
+| [User guide](docs/CLEANER.md) | Everyday use, cleanup rules, defaults, and troubleshooting |
+| [Features](docs/FEATURES.md) | Current functionality and its limits |
+| [Architecture](docs/ARCHITECTURE.md) | Components, data flow, and repository map |
+| [Design](docs/DESIGN.md) | Native controls, layout, motion, and interaction rules |
+| [Privacy](docs/PRIVACY.md) | Local data, permissions, and network behavior |
+| [Performance](docs/PERFORMANCE.md) | Scan caching, traversal, sampling, and validation |
+| [Changelog](CHANGELOG.md) | xean changes and the upstream release history |
+| [Roadmap](docs/ROADMAP.md) | Follow-up work, separate from implemented features |
 
-## Contribute
+## Credits and license
 
-Bug reports, focused fixes, and documentation improvements are welcome.
-Read [CONTRIBUTING.md](CONTRIBUTING.md), and open an issue before starting a larger change.
-
-Use [GitHub Issues][issues] for reproducible bugs and feature requests.
-Report security problems privately as described in [SECURITY.md](SECURITY.md).
-
-## License
-
-BlitzClean is available under the [MIT License](LICENSE).
-Projects that shaped it are credited in [open-source bases](OPEN_SOURCE_BASES.md).
-
-<p align="center">
-  <a href="https://blitzreels.com?utm_source=github&utm_medium=readme&utm_campaign=blitzclean-oss">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/blitzreels-logo-white.png">
-      <img src=".github/assets/readme/blitzreels-logo-dark.png" width="170" alt="BlitzReels">
-    </picture>
-  </a>
-</p>
-
-[releases]: https://github.com/blitzreels/blitzclean/releases/latest
-[issues]: https://github.com/blitzreels/blitzclean/issues
+xean is [MIT licensed](LICENSE), built on [BlitzClean](https://github.com/blitzreels/blitzclean).
+Original copyright and third-party notices are preserved. [Open-source credits](OPEN_SOURCE_BASES.md)
+explain the inherited code, bundled dependencies, and Cuelume sound assets.

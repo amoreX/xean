@@ -22,8 +22,8 @@ body:
       label: Steps to reproduce
       description: List the smallest set of steps that triggers the issue.
       placeholder: |
-        1. Open BlitzClean
-        2. Go to Storage → Cleanup
+        1. Open xean from the menu bar
+        2. Expand Build files
         3. Press ...
     validations:
       required: true
@@ -32,25 +32,25 @@ body:
     attributes:
       label: Affected area
       options:
-        - Menu bar panel
-        - Overview or pressure warnings
-        - Memory or AI sessions
-        - CPU
-        - Storage (Browse, Largest files, Inventory)
-        - Storage Cleanup or removal
-        - Revive apps
-        - Projects
-        - Settings or permissions
-        - Build or release
+        - Cleaner panel or native controls
+        - Category lists or scanning
+        - Manual Clean or individual Delete
+        - Auto-clean or low-space warning
+        - Worktrees or project dependencies
+        - Docker build cache
+        - Menu bar stats
+        - Login or app lifetime
+        - Build or launcher
+        - Documentation
         - Not sure
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: BlitzClean version
-      description: Shown at the bottom of Settings.
-      placeholder: "1.1.0"
+      label: xean source commit
+      description: Run git rev-parse --short HEAD in your checkout.
+      placeholder: "e.g. 91a83d0"
     validations:
       required: true
   - type: input
@@ -65,8 +65,9 @@ body:
     attributes:
       label: How did you install it?
       options:
-        - GitHub release
-        - Built from source
+        - Built with start.sh
+        - Built with SwiftPM or another repository script
+        - Other
     validations:
       required: true
   - type: textarea

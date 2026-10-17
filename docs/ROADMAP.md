@@ -1,24 +1,23 @@
-# Roadmap
+# xean roadmap
 
-## Available in 1.2.0
+The current source build already has the single-panel cleaner, category inventories, immediate manual
+cleanup, opt-in automatic cleanup, visual low-space warnings, configurable menu bar stats, and native glass
+controls. See [Features](FEATURES.md) for shipped behavior.
 
-- A redesigned menu-bar panel with memory, CPU, storage, and the apps using the most memory.
-- One Settings setup section for Notifications, Accessibility, and Full Disk Access.
-- Persistent menu-bar monitoring and seven-day CPU/RAM charts.
-- Direct app recovery with refreshed health checks, Force Quit, and crash reopening.
-- Recursive directory browsing and largest-file ranking across connected local drives.
-- Reviewed cache/developer cleanup, Trash for personal files, and Remove again history.
-- Media filters, exact duplicates, and optional local FFmpeg exports.
-- Project/AI-worker visibility, pressure warnings, and opt-in project pausing.
-- Developer ID signed and notarized universal downloads.
+The following are follow-up areas, not implemented features or release commitments:
 
-## Next
+- **Independent app identity.** Rename the executable, bundle, artwork, preference domain, and data directory
+  with an explicit migration plan. xean currently shares BlitzClean's compatibility identifiers.
+- **Binary distribution.** Prepare xean-specific versioning, signed/notarized downloads, checksums, and
+  release validation for both supported Mac architectures.
+- **Update infrastructure.** Replace inherited feed/key defaults before considering an xean updater.
+  The current app does not start Sparkle.
+- **Broader UI validation.** Exercise light/dark appearance, Reduce Motion, Increase Contrast, keyboard
+  access, VoiceOver, older macOS fallbacks, and smaller screens on more hardware.
+- **Cleanup coverage.** Add supported cache/build locations only with fixture tests for their deletion
+  boundaries, active-tool checks, and failure states.
+- **Large-tree profiling.** Continue measuring traversal and cancellation with representative disposable
+  dependency/build trees without reintroducing arbitrary scan caps.
 
-- Show GPU-wired and system memory so local AI models are visible in Memory and the menu bar.
-- Automate notarization for every public download and add automatic updates.
-- Broader hardware coverage and accessibility audits.
-- More cache recipes backed by dedicated safety tests.
-- User controls for history retention and exporting pressure diagnostics.
-
-Listed features cannot recover every frozen app or prevent every system-wide crash.
-Release notes describe what was validated for each build.
+Contributions should keep the menu bar utility compact and preserve explicit auto-clean opt-in and fresh
+removal validation. See [Contributing](../CONTRIBUTING.md) before proposing a larger change.

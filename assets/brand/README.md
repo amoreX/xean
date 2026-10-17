@@ -1,38 +1,28 @@
-# BlitzClean identity
+# xean and retained bundle artwork
 
-The mark combines an open C with a lightning cut in mint `#17FFA6` on graphite.
-It replaces the separate bolt and sparkle with one silhouette and no text.
-The production artwork is clean SVG geometry; AI-generated concepts informed the direction.
+The current product name is lowercase **xean**. Its active menu bar icon is the system `eraser.fill` symbol;
+optional metrics sit to its left. AppKit supplies the popover's appearance, pointer, border, and shadow.
+Do not add a custom glass background or outline to the cleaner.
 
-- `BlitzClean.icon/Assets/Mark.svg`: unmasked, transparent foreground at 1024 × 1024.
-- `BlitzClean.icon/Assets/Background.svg`: opaque, full-bleed graphite layer.
-- `BlitzClean.icon/icon.json`: prepared layered Icon Composer document.
-- `app-icon.png`: sRGB 1024px fallback icon for the existing macOS 14+ bundle.
+The app bundle still contains inherited BlitzClean artwork and uses the `BlitzClean.app` filename. These
+assets are retained, not a new xean logo. A separate bundle/artwork migration is listed in
+[the roadmap](../../docs/ROADMAP.md).
 
-The legacy ICNS uses the familiar macOS inset rounded tile; the layered sources have no baked corner mask.
-The foreground has no baked glow, shadow, texture, or bevel. System effects belong in Icon Composer.
-The layered document is not yet included in the app: first-use Apple licence acceptance is pending.
+| Asset | Contents |
+| --- | --- |
+| `BlitzClean.icon/Assets/Mark.svg` | Transparent 1024 × 1024 mint C/lightning foreground |
+| `BlitzClean.icon/Assets/Background.svg` | Opaque graphite background layer |
+| `BlitzClean.icon/icon.json` | Layered Icon Composer source |
+| `app-icon.png` | 1024 px fallback artwork used to generate the bundled ICNS |
+| `family/` | Retained BlitzReels/BlitzRecorder artwork for upstream views; not promoted in xean's panel |
 
-Design reference: [Apple app icon guidance](https://developer.apple.com/design/human-interface-guidelines/app-icons).
-Apple recommends simple centered shapes, crisp foreground edges, and unmasked layers for current macOS icons.
-
-Regenerate the fallback PNG from the SVG, then generate every native ICNS size:
+The layered Icon Composer document is not currently used by the packaging script. Regenerate the fallback
+artwork and ICNS from the repository root with:
 
 ```sh
 swift scripts/render-icon.swift assets/brand/app-icon.png
 ./scripts/build-icon.sh
 ```
 
-## Concept brief
-
-Built-in image generation was used for exploration, then the production mark was authored as vector geometry.
-Prompt: A bold mint C-shaped circular sweep with a lightning-shaped opening, one unified cleaning-and-speed emblem.
-Centered, simple, thick silhouette, clear at 16px, no text or sparkles, transparent foreground, no baked effects.
-
-The menu bar loads the vector as a template image so it works in light and dark appearances.
-The dashboard and tray load the bundled ICNS; brand assets are cached rather than reread on each update.
-
-## BlitzReels family
-
-`family/` holds the BlitzReels wordmark (white, from the BlitzReels brand kit) and 128px icons for BlitzReels and
-BlitzRecorder. Settings shows them under Our other apps. Copy new versions from the source products; do not redraw.
+Preserve source attribution and license notices. Follow [Design](../../docs/DESIGN.md) for active cleaner
+UI changes rather than the visual conventions of the retained dashboard artwork.

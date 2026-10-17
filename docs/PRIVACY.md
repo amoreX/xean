@@ -1,77 +1,72 @@
-# Privacy and permissions
+# xean privacy and permissions
 
-BlitzClean runs locally, without a telemetry SDK, account service, or remote AI inference.
-App and process names, folder paths, and local history stay on your Mac unless you choose to share them.
+The cleaner runs locally. It has no account system, telemetry, analytics SDK, cloud scan, or remote AI
+inference. Paths, measurements, settings, and cleanup history stay on the Mac unless you choose to share them.
 
-## Network
+## What the active cleaner reads
 
-The only network request is the update check in release builds from 1.3.0. Once a day, and when you choose
-Check for updates, Sparkle fetches `appcast.xml` from GitHub Releases. The request carries the app and Sparkle
-versions in its user agent; no system profile, identifier, or usage data is sent. A found update downloads from
-GitHub and installs only if its EdDSA signature matches the key built into the app.
-Turn off automatic checks in Settings > Updates. Development builds have no feed and make no request.
+- File identity, type, size, modification times, and directory structure in supported cleanup locations.
+- Project manifests, lockfile presence, Git metadata, checkout status, and local branch ancestry to check
+  whether dependencies, build output, and worktrees are eligible. It does not fetch remote Git branches.
+- Local process and open-file information to avoid removing data in use. Activity checks may read command
+  lines locally; these are not copied into the cleanup ledger.
+- Local Docker builder-cache information through a verified Unix socket when Docker cleanup is selected.
+- Available disk space. Optional menu bar metrics also read host CPU and memory statistics.
 
-## Local data
+The active cleaner does not invoke the inherited AI session-title readers, window-response probes, local
+HTTP project probes, process-signaling controls, media tools, or dashboard history monitors. Conversation
+contents, credentials, installed plugins, and whole app profiles are outside its cleanup allowlist.
 
-Local files live in `~/Library/Application Support/BlitzClean`.
-On first launch, files from the folder used before 1.2.0 (`Application Support/FreeSpace`) move there without
-replacing anything, and cleanup reports dropped in that old `reports` folder are still imported.
+## Stored data
 
-| Store | Retention and contents |
+xean currently retains the inherited `com.blitzreels.BlitzClean` bundle/preference domain and
+`~/Library/Application Support/BlitzClean` data folder. An installed BlitzClean copy can therefore share
+this data. Renaming the interface has not isolated the two apps' preferences.
+
+| Store | Contents and lifetime |
 | --- | --- |
-| Cleanup ledger | At most 1,000 records, including reviewed paths and measured space changes. |
-| Memory incidents | At most 1,440 events from the last 24 hours, including app/tool and project names. |
-| Pressure trace | Up to 240 recent samples/actions and top project summaries. |
-| CPU/RAM charts | Two-second detail for 15 minutes and five-minute points for seven days; at most 512 KiB on disk. |
-| File review | At most 5,000 entries / 8 MiB, including paths, sizes, identity metadata, and scan time. |
-| Media exports | At most 100 completed records / 512 KiB, including input/output paths and results. |
+| Cleaner preferences | Selected categories, warning/automatic modes, thresholds, worktree age, and preserved custom project roots |
+| Menu bar preferences | Enabled state, selected metrics, and memory display format |
+| `cleaner.lastCheck` | Latest background-check timestamp, retained across launches |
+| `cleaner.lastOutcome` | Most recent result: date, counts, measured removed bytes, and observed free-space gain |
+| `cleanup-history.json` | Up to 1,000 removal records, with paths, dates, measured sizes, and before/after volume readings |
+| Category scan cache | In-memory inventory, reused for 30 seconds after completion; no persistent scan database |
+| Cleanup screen | Transient queue/result, cleared when the panel closes |
 
-Persisted JSON files have owner-only permissions.
-File filters, navigation, dismissed crash reports, project choices, and selected scan roots also survive relaunch.
+The cleanup ledger uses atomic writes, a local file lock, and owner-only file permissions. Settings live
+in UserDefaults. Older chart, media, or incident files can remain from upstream installations; the active
+cleaner does not start those subsystems or continually write their histories. Legacy preference migration
+is retained.
 
-The `com.blitzreels.BlitzClean` preference domain stores notification choices, project settings, and start commands.
-Selected preferences are copied once from the older `fr.algomax.FreeSpace` domain, which is left unchanged.
+File paths and project names can be sensitive. Replace them with placeholders before sharing logs or
+screenshots. Never commit local history, reports, build artifacts, or machine screenshots.
 
-Do not put secrets directly in saved commands; use the project's environment setup instead.
-Process arguments are read locally to identify tools, but incident histories do not retain arguments or credentials.
+## Network behavior
 
-Developer browsing reads package manifests and Git metadata without fetching remote branches, querying GitHub, or running npx.
-Directory listings, recursive scans, duplicate hashing, and media processing run locally.
+The running cleaner does not start an updater or send scan results anywhere. Sparkle remains a build
+dependency, but its update controller is not instantiated. The app uses already-rendered local sound assets.
+Docker operations are restricted to a local endpoint, not a remote Docker host.
 
-AI session naming reads bounded local title indexes and Claude session identity records.
-For Codex CLI, an open rollout filename can identify the session; its conversation body is not read.
-Cursor metadata is read through a read-only database connection; message blobs and encryption keys are not used.
-Session titles stay in the live process list and are not added to monitoring history.
+Cloning and the first build use GitHub and SwiftPM to obtain source and dependencies. Visiting documentation
+or repository links in a browser is a separate network action. Building a signed distribution can also
+contact Apple's signing/notarization services; this is not cleaner telemetry.
 
-No conversation contents, window text, environment variables, or stack dumps are collected into the monitoring history.
-A project or app name can itself be sensitive, so review exports before sharing.
+## Permissions
 
-## Permissions and connections
+“Notify when low” shows an in-app/menu bar badge, so it does not request notification permission.
+The cleaner does not need Accessibility permission for its normal interface or window-response checks.
+macOS can still restrict access to protected folders. A denied or unverifiable path stays protected;
+the app does not elevate privileges or bypass macOS filesystem protections.
 
-Settings > Finish setup lists the permissions that are still missing. No page asks on its own.
+Start at login uses `SMAppService.mainApp` and is optional. Signing identity and bundle location affect
+how macOS recognizes the app; local ad-hoc rebuilds can affect stored permissions or login registration.
 
-- Notifications are optional and used for resource-pressure alerts.
-- Files and Folders access can be required for protected locations; denied paths are reported.
-  Full Disk Access may be needed to inspect more protected macOS data, and does not bypass every system restriction.
-- Accessibility enables window-response checks; no window text is logged for recovery.
-- Local HTTP probes identify listening ports and can cause a development server to serve or compile a page.
-- Opening a port launches its local address in your browser.
-- Package tools, saved server commands, Docker, and external cleanup tools follow their own network/permission behavior.
-- FFmpeg/FFprobe are optional local installations, not bundled downloads.
+## Deletion and lifetime
 
-The app's code signature affects how macOS remembers permissions.
-Ad-hoc rebuilds or a changed signing identity can require granting access again.
+Manual Clean and Delete permanently remove eligible data without another confirmation. Auto-clean requires
+explicit opt-in and uses the selected categories, threshold, age policies, and fresh safety checks.
+Neither operation is a general-purpose Trash action; xean has no restore feature.
 
-## Actions and lifetime
-
-Personal-file removal uses Trash; BlitzClean never empties it.
-Confirmed cache/developer cleanup can permanently delete rebuildable items after revalidation.
-
-Normal Quit/Stop actions are immediate; Force Quit and bulk termination require inline review.
-Automatic project pausing requires per-project consent and never deletes data or kills apps.
-
-Monitoring continues when the main window closes; quit BlitzClean to stop it.
-Saved server commands are not automatically stopped when BlitzClean quits.
-
-A system-wide stall can stop BlitzClean too: it is not a separate recovery daemon.
-Local pressure traces cannot establish the cause of a kernel panic.
+Closing the panel keeps active cleanup and scheduled checks running. Quitting exits the app; xean is not
+a separate background daemon and cannot run while the Mac is asleep or the app is stopped. See
+[the user guide](CLEANER.md) for cleanup rules and [Security](../SECURITY.md) for reporting a problem.

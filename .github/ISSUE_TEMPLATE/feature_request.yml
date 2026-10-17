@@ -7,8 +7,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Ideas are welcome. BlitzClean keeps a focused direction and strict safety rules, so not every request
-        will be accepted. Anything that deletes or stops things automatically is out of scope.
+        Ideas are welcome. xean is a compact menu bar cleaner. Describe the problem and how the change fits
+        that workflow. Automatic cleanup must remain opt-in and preserve deletion safeguards.
   - type: textarea
     id: problem
     attributes:
@@ -28,13 +28,12 @@ body:
     attributes:
       label: Affected area
       options:
-        - Menu bar panel
-        - Memory or AI sessions
-        - CPU
-        - Storage or cleanup
-        - Revive apps
-        - Projects
-        - Settings
+        - Cleaner panel or native controls
+        - Cleanup categories or scanning
+        - Auto-clean or low-space warning
+        - Menu bar stats
+        - Settings or login
+        - Build or distribution
         - Documentation
         - Not sure
     validations:

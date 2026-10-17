@@ -1,72 +1,57 @@
-# Open-source bases
+# xean open-source credits
 
-BlitzClean combines a small menu-bar monitor with existing cleanup tools.
-Its feature direction draws from these projects.
+xean is a fork of [BlitzClean](https://github.com/blitzreels/blitzclean). Its cleaner reuses the upstream
+cache, filesystem, project/Git, Docker, metric-rendering, and history infrastructure, with a focused menu
+bar interface and its own cleanup orchestration. Upstream dashboard and other modules remain in source.
 
-## ClearDisk
+The [MIT License](LICENSE) preserves the BlitzReels, BlitzClean, and Buildkeep copyright notices.
+This fork does not replace those credits or claim the inherited code and artwork as newly authored.
 
-- Source: <https://github.com/bysiber/cleardisk>
-- License: MIT
-- Adopt: developer-cache catalog, risk levels, cache descriptions, storage-pressure alerts,
-  project-artifact detection, and storage forecasting.
-- Keep different: BlitzClean also shows available RAM and delegates cleanup to Mole and Docker.
+## Bundled packages and assets
 
-## Stats
+| Project | Role in this repository | Notice |
+| --- | --- | --- |
+| [Sparkle](https://github.com/sparkle-project/Sparkle) | Inherited SwiftPM updater framework, included in bundles; xean does not instantiate its updater | The packaging script copies Sparkle's own license from the resolved artifact |
+| [LiquidGlass](https://github.com/metneo/LiquidGlass) | Pinned dependency used by retained shared components; the active cleaner uses AppKit/SwiftUI native controls | [MIT notice](licenses/LiquidGlass-LICENSE.txt) |
+| [Cuelume](https://github.com/danielwh2/cuelume) | Eight locally rendered interaction cues played through AVAudioPlayer | [MIT notice](licenses/Cuelume-LICENSE.txt) |
+| [OrphanBar](https://github.com/scr2em/orphan-bar) | Adapted leftover-process rules in retained upstream code, not an active xean feature | [MIT notice](licenses/OrphanBar-LICENSE.txt) |
 
-- Source: <https://github.com/exelban/stats>
-- License: MIT
-- Adopt: low-overhead native metric collection and configurable menu-bar presentation.
-- Keep different: BlitzClean exposes one compact storage label instead of one item per metric.
+SwiftPM pins LiquidGlass to `36f81c85922aa3475b7e5bb210e69ffe20a2b377`. Sparkle's declared requirement is
+in [`Package.swift`](Package.swift); `Package.resolved` records the resolved dependency state.
 
-## Purge
+## Reproducing Cuelume sounds
 
-- Source: <https://github.com/jithin-sabu/purge-app>
-- License: MIT
-- Adopt: allowlist-based cleanup, safety explanations, stale-project thresholds,
-  lockfile checks, and streamed scan results.
-- Keep different: BlitzClean remains a tray-first utility and keeps interactive cleanup commands in Terminal.
+Cues use the upstream default recipes at commit `2a1ba4fc1b67e8371c9f37e37a51e61353166335` (version 0.2.8).
+In a separate scratch checkout of Cuelume:
 
-## Radix
+```sh
+git checkout 2a1ba4fc1b67e8371c9f37e37a51e61353166335
+npm ci --ignore-scripts
+npm run build
+```
 
-- Source: <https://github.com/colinvkim/Radix>
-- License: MIT
-- Adopt later: actor-based scanning, progress reporting, scan snapshots, exclusions, and incremental rescans.
-- Keep different: no treemap in the tray utility unless the simple category view stops being sufficient.
+Then, from the xean repository:
 
-## OrphanBar
+```sh
+node scripts/render-cleaner-sounds.mjs /path/to/cuelume
+```
 
-The original MIT notice is preserved in [licenses/OrphanBar-LICENSE.txt](licenses/OrphanBar-LICENSE.txt)
-and included in packaged apps.
+The script verifies the revision and uses Cuelume's offline renderer with seeded noise and the default
+theme. It writes eight 48 kHz stereo WAVs to `Sources/BlitzClean/Resources/Cuelume`. SwiftPM and app packaging
+bundle those assets and their MIT notice. The running app needs neither Node.js nor a network connection.
 
-- Source: <https://github.com/scr2em/orphan-bar>
-- License: MIT (same author as the BlitzClean change that adapted it)
-- Adopt: leftover-process rules (launchd parent, not a launchd job, app, XPC service, or system component,
-  and not a helper of a running app) and interpreter titles such as `python http.server`.
-- Keep different: BlitzClean reuses its own process snapshot, identity checks, and Projects page instead of
-  a second menu bar item and polling loop.
+## Inherited design references
 
-## Cuelume
+The upstream project documented these references; listing them does not imply that all of their features
+are implemented in xean or that their authors maintain this fork:
 
-- Source: <https://github.com/danielwh2/cuelume> · <https://cuelume.dev>
-- License: MIT, copyright 2026 Daniel Belyi. Preserved in
-  [licenses/Cuelume-LICENSE.txt](licenses/Cuelume-LICENSE.txt) and packaged apps.
-- Eight native WAV cues are generated with the project's own offline renderer and default sound recipes
-  at commit `2a1ba4fc1b67e8371c9f37e37a51e61353166335` (package version 0.2.8).
-- `scripts/render-cleaner-sounds.mjs` reproduces the assets. Playback is native AVAudioPlayer; the app
-  has no JavaScript or network dependency for sounds.
-
-## LiquidGlass
-
-- Source: <https://github.com/metneo/LiquidGlass>
-- License: MIT. The original notice is preserved in
-  [licenses/LiquidGlass-LICENSE.txt](licenses/LiquidGlass-LICENSE.txt) and packaged apps.
-- SwiftPM dependency pinned to `36f81c85922aa3475b7e5bb210e69ffe20a2b377`.
-- Used for the cleaner's panels, buttons, selection controls and inputs, with native macOS 26 glass and
-  the package's material renderer on older supported systems. The window backdrop uses AppKit material.
-- Package reference: [LiquidGlass skill](https://github.com/metneo/LiquidGlass/blob/36f81c85922aa3475b7e5bb210e69ffe20a2b377/skills/liquidglass/SKILL.md).
+- [ClearDisk](https://github.com/bysiber/cleardisk): developer-cache catalog and storage cleanup concepts.
+- [Stats](https://github.com/exelban/stats): native metric collection and menu bar presentation.
+- [Purge](https://github.com/jithin-sabu/purge-app): allowlisted cleanup, project-age and lockfile checks.
+- [Radix](https://github.com/colinvkim/Radix): scanning, progress, and snapshot design references.
 
 ## License policy
 
-- Preserve copyright and MIT license notices for copied or substantially adapted source.
-- Prefer clean-room implementations of ideas when importing a full subsystem is unnecessary.
-- Do not copy GPL or non-commercial source into BlitzClean without changing the app's license strategy.
+Preserve notices for copied or substantially adapted code and assets. Check licenses before adding new
+dependencies. Do not import GPL or non-commercial source into this MIT project without first resolving
+the licensing implications. The packaged app must continue to include the applicable notices.

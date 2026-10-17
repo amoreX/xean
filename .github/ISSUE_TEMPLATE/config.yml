@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security report
-    url: mailto:support@blitzreels.com
-    about: Report vulnerabilities, unsafe deletion paths, or private data exposure by email, not in a public issue.
+    url: https://github.com/amoreX/xean/blob/codex/blitzclean/SECURITY.md
+    about: Read the xean reporting policy before sharing vulnerabilities, unsafe deletion paths, or private data.

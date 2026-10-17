@@ -6,7 +6,7 @@ What does this change do, and why?
 
 - [ ] Bug fix
 - [ ] UI or behavior change
-- [ ] Cleanup, deletion, or process-control logic
+- [ ] Cleanup policy, deletion, or scan caching
 - [ ] Documentation
 - [ ] Tests
 - [ ] Build, release, or packaging
@@ -14,13 +14,14 @@ What does this change do, and why?
 ## Checks
 
 - [ ] I kept the PR focused on one change.
-- [ ] `./scripts/check.sh` passes, or I explained why I could not run it.
+- [ ] I ran the relevant checks and listed the results (or explained what could not be run).
 - [ ] For UI changes: I attached before/after screenshots made with synthetic data
-      (`BLITZCLEAN_DESIGN_DIR=/tmp/shots swift test --filter DesignRenderTests`) and followed `docs/DESIGN.md`.
-- [ ] For cleanup or process changes: I added tests against disposable fixtures and kept the safety rules in
+      (`BLITZCLEAN_DESIGN_DIR=artifacts/cleaner swift test --filter CleanerRenderTests`), checked the running app,
+      and followed `docs/DESIGN.md`.
+- [ ] For cleanup or scan changes: I added tests against disposable fixtures and kept the safety rules in
       `CONTRIBUTING.md`.
 - [ ] I did not include secrets, private paths, process command lines, or personal data.
 
 ## Notes
 
-Larger changes should start with an issue so we can agree on the approach first.
+Larger changes should start with a draft PR describing the proposed scope.

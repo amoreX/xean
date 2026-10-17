@@ -1,67 +1,77 @@
-# Contributing to BlitzClean
+# Contributing to xean
 
-Thanks for your interest in BlitzClean. Issues, ideas, and pull requests are welcome.
-BlitzClean is also a focused product with strict safety rules, so opening a PR does not guarantee it will be merged.
+xean is a focused macOS menu bar cleaner. Useful contributions include reproducible bug reports, compact
+UI fixes, documentation, and supported cleanup locations backed by deletion-boundary tests.
 
-## What to contribute
-
-Good first contributions:
-
-- Bug reports with clear reproduction steps.
-- Small bug fixes with a test.
-- Documentation and wording improvements.
-- New rebuildable cache or build-output locations, with tests proving what is and isn't removed.
-- Test coverage for existing behavior.
-
-Look for issues labeled `good first issue` or `help wanted`.
-For anything larger, such as a new page, a new kind of cleanup, or a change to process control,
-open an issue first so we can agree on the approach.
-
-## Pull requests
-
-Keep each PR to one change. A PR may be closed if it:
-
-- Adds automatic deletion, automatic force-quit, or memory-purge behavior.
-- Changes the UI without following [docs/DESIGN.md](docs/DESIGN.md).
-- Adds dependencies, network calls, or telemetry.
-- Includes secrets, private paths, process command lines, or personal data.
-- Is too large to review confidently.
-
-Closing a PR is not a judgment on the contributor; it usually means the change does not fit right now.
+Use [pull requests](https://github.com/amoreX/xean/pulls) for contributions. For a larger change, start with
+a draft PR describing the problem and proposed scope before implementing it. Repository issue forms are
+included for when Issues is enabled. Do not send xean-specific support requests to the upstream project.
 
 ## Setup
 
-Use macOS 14+ and a Swift 6 toolchain. Run `./script/build_and_run.sh` to build and install the native app.
-Install FFmpeg/FFprobe with `brew install ffmpeg` to run the media integration tests.
-Run `./scripts/check.sh` before opening a pull request, followed by `./scripts/build-app.sh` for packaging changes.
-Without a local signing certificate, use `BLITZCLEAN_SIGNING_IDENTITY=-` for an ad-hoc development build.
-See [Releasing](docs/RELEASING.md) for signed universal downloads and notarization.
+Use full Xcode 26 or newer and a Mac capable of running it. The app's runtime minimum is macOS 14; native
+Liquid Glass controls are conditional on macOS 26+. Select Xcode's command-line tools, then run:
 
-The check script runs native integration cases sequentially so timing-sensitive fixtures do not compete on small runners.
-Concurrency behavior is still exercised inside the relevant tests.
+```sh
+./start.sh
+```
 
-Keep changes focused. Explain the user-visible behavior and include the relevant validation.
-For UI changes, render every screen with `BLITZCLEAN_DESIGN_DIR=/tmp/shots swift test --filter DesignRenderTests`
-and attach before/after images. Screenshots must use synthetic project names and data;
-do not publish a contributor's running processes or history.
+The launcher builds and opens the checkout's `dist/BlitzClean.app` with ad-hoc signing by default. Quit
+xean and use `./start.sh --build` after source edits. Set `BLITZCLEAN_SIGNING_IDENTITY` to use your own
+certificate. The target and bundle still use the inherited name; see [Architecture](docs/ARCHITECTURE.md).
 
-## Safety requirements
+## Checks
 
-- Never infer that low CPU means a process is abandoned.
-- Revalidate process identity, owner and project policy immediately before signaling it.
-- Keep AI apps, active sessions, booted simulators and data-bearing Docker resources protected.
-- Never add silent deletion, automatic force-quitting or memory-purge commands.
-- Verify cleanup against disposable fixtures, not a contributor's real files.
-- Keep persisted history bounded and exclude commands, environment variables, tokens and conversation contents.
-- Keep the migration of data folders and preferences from earlier releases working.
-- Default to small build concurrency and avoid repeated full-disk scans.
+```sh
+swift test --no-parallel -j 2 --filter Cleaner
+./scripts/check.sh
+```
 
-Use one input structure for functions with multiple domain parameters.
-Add focused tests for deletion boundaries, process identity, launch validation and persistence migrations.
-Use `xcrun swift-format format --in-place <changed files>` for Swift formatting.
+The full check script builds, runs tests sequentially, lints Swift, validates plists, and checks shell
+syntax. Retained media integration tests need FFmpeg/FFprobe (`brew install ffmpeg`). The cleaner itself
+has no FFmpeg requirement. Keep build concurrency modest and avoid competing full-directory scans.
 
-See `OPEN_SOURCE_BASES.md` before adapting source from another project and preserve all required notices.
+Format changed Swift files with `xcrun swift-format format --in-place <files>`. For packaging changes,
+run `BLITZCLEAN_SIGNING_IDENTITY=- ./scripts/build-app.sh` and verify the resulting bundle.
 
-## License
+## UI changes
 
-By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE).
+Read [Design](docs/DESIGN.md) before changing visible UI or product copy. Use native controls and the
+existing cleaner components. Inspect changed screens in the running packaged app, including light/dark
+appearance, compact screens, loading, empty, partial failure, and completion where relevant.
+
+Fixture renders are a useful additional check:
+
+```sh
+BLITZCLEAN_DESIGN_DIR=artifacts/cleaner swift test --no-parallel -j 2 --filter CleanerRenderTests
+```
+
+Native popover borders and composited glass also need a running-app check. Capture before/after examples
+with synthetic names and paths; do not publish personal desktop screenshots or real project inventories.
+Use fixture drivers for cleaning/progress demos and never enable real auto-clean for visual QA.
+
+## Cleanup changes
+
+- Test removals against disposable fixtures, never a contributor's real caches or projects.
+- Preserve fresh identity, allowlist, activity, open-file, and applicable age checks before deletion.
+- Keep root links protected; do not traverse nested symlink destinations.
+- Preserve lockfile requirements and Git protections for primary, active, dirty, locked, detached,
+  unmerged, or explicitly kept worktrees. Keep Docker images, containers, and volumes outside this cleaner.
+- Manual Clean and Delete are intentionally immediate. Automatic cleanup must remain an explicit opt-in,
+  use the chosen threshold/categories, and retain automatic age rules.
+- Unreadable or unverifiable data must remain protected. Do not treat partial measurements as verification.
+- Preserve 30-second category caching with immediate stale-result clearing, and revalidate cached targets.
+- Keep removal history bounded and omit credentials, command lines, and conversation contents.
+- Preserve existing preference/history compatibility or provide a tested migration.
+
+## Pull requests
+
+Explain the problem, resulting behavior, and relevant verification. Keep scope focused and disclose any
+checks you could not run. Include targeted tests for changed deletion boundaries, caching, persistence,
+or operation lifetime; documentation-only edits do not require rebuilding the app.
+
+Do not commit private paths, secrets, local history, generated builds, or unredacted machine screenshots.
+Read [Security](SECURITY.md) before sharing a potential unsafe-deletion report. Preserve upstream and
+third-party notices in [Open-source credits](OPEN_SOURCE_BASES.md).
+
+Contributions are licensed under this repository's [MIT License](LICENSE).
