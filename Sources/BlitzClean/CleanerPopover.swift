@@ -10,18 +10,10 @@ final class CleanerPopover: NSPopover {
 
   var didDismiss: (() -> Void)?
   private(set) var isPresented = false
-  private(set) var anchorRect: NSRect = .zero
   private var generation = 0
   var window: NSWindow? { contentViewController?.view.window }
 
-  func updateAnchor(_ rect: NSRect) {
-    anchorRect = rect
-    // AppKit cannot reposition a popover until its native window has been created.
-    if isShown && positioningRect != rect { positioningRect = rect }
-  }
-
   func present(relativeTo rect: NSRect, of view: NSView) {
-    anchorRect = rect
     generation += 1
     isPresented = true
     animates = false
@@ -71,4 +63,24 @@ final class CleanerPopover: NSPopover {
       MainActor.assumeIsolated { completion?() }
     }
   }
+}
+
+/// AppKit follows this fixed-size view as the status item's metrics expand to its left.
+@MainActor
+final class CleanerStatusAnchor: NSView {
+  init(in view: NSView, trailingInset: CGFloat) {
+    super.init(frame: .zero)
+    translatesAutoresizingMaskIntoConstraints = false
+    setAccessibilityElement(false)
+    view.addSubview(self)
+    NSLayoutConstraint.activate([
+      widthAnchor.constraint(equalToConstant: 18),
+      trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -trailingInset),
+      topAnchor.constraint(equalTo: view.topAnchor),
+      bottomAnchor.constraint(equalTo: view.bottomAnchor),
+    ])
+  }
+
+  required init?(coder: NSCoder) { nil }
+  override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }

@@ -93,8 +93,9 @@ links, never by traversing their destinations. A small race remains between fina
 
 ## Menu bar stats and appearance
 
-Show menu bar stats starts enabled. Expand Stats shown beneath it to select CPU, memory, disk, or a single
-metric. Memory supports available GB, used GB, and used percentage. At least one metric remains selected
+Show menu bar stats starts enabled, with CPU, memory, and disk controls directly beneath it. Click its
+label or switch to toggle stats and show or hide those controls. Memory supports available GB, used GB,
+and used percentage. At least one metric remains selected
 while enabled. Metrics sample every two seconds; switching them off stops this sampler.
 
 Stats sit to the left of the eraser, which remains the popover anchor. AppKit supplies the translucent

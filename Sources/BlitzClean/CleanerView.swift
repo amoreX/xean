@@ -9,7 +9,6 @@ struct CleanerView: View {
   var onQuitCancel: () -> Void = {}
   var onClose: () -> Void = {}
   @State private var confirmAutomatic = false
-  @State private var showStatsOptions = false
 
   var body: some View {
     Group {
@@ -130,30 +129,17 @@ struct CleanerView: View {
 
   private var settings: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Toggle("Show menu bar stats", isOn: $menuBarStats.enabled)
-        .cleanerSwitchRow().font(BlitzType.body).cleanerScrollItem()
+      HStack {
+        Text("Show menu bar stats")
+          .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+          .onTapGesture { menuBarStats.enabled.toggle() }
+          .accessibilityHidden(true)
+        Toggle("Show menu bar stats", isOn: $menuBarStats.enabled)
+          .labelsHidden().toggleStyle(.switch)
+      }.font(BlitzType.body).frame(height: 34).cleanerScrollItem()
         .onChange(of: menuBarStats.enabled) { _, _ in model.sounds.play(.toggle) }
       CleanerDisclosureReveal(expanded: menuBarStats.enabled) {
-        VStack(alignment: .leading, spacing: 0) {
-          Button {
-            showStatsOptions.toggle()
-            model.sounds.play(.toggle)
-          } label: {
-            HStack {
-              Text("Stats shown")
-              Spacer()
-              Image(systemName: "chevron.right")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .rotationEffect(.degrees(showStatsOptions ? 90 : 0))
-                .frame(width: 38)
-            }.frame(maxWidth: .infinity, minHeight: 34).contentShape(Rectangle())
-          }.buttonStyle(.plain).cleanerScrollItem()
-            .accessibilityValue(showStatsOptions ? "Expanded" : "Collapsed")
-          CleanerDisclosureReveal(expanded: showStatsOptions) {
-            statsOptions
-          }
-        }.font(BlitzType.body)
+        statsOptions.font(BlitzType.body)
           .padding(.leading, 16)
           .onChange(of: menuBarStats.display) { _, _ in model.sounds.play(.toggle) }
       }

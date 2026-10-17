@@ -57,9 +57,12 @@ with no sound settings; opening and closing are silent.
 
 Menu bar metrics use the original BlitzClean icons, typography and renderer, positioned to the left
 of the eraser. Width changes animate for 180 ms while the eraser and its popover stay anchored.
-Show menu bar stats is enabled by default and stops two-second sampling when disabled. Indent the
-whole-row Stats shown disclosure one level beneath its main toggle. It selects CPU, memory and disk,
-including a single metric, and the original available/used/percentage memory formats. Keep at least
+Attach the native popover to a fixed-size view over the eraser, pinned to the trailing edge of the
+status button. Let AppKit follow that view; do not recalculate the pointer from the changing stats image.
+Show menu bar stats is enabled by default and stops two-second sampling when disabled. Clicking its
+label or switch toggles the feature and reveals or collapses the metric controls directly beneath it,
+indented one level. Do not add a separate Stats shown row or disclosure. The controls select CPU, memory
+and disk, including a single metric, and the original available/used/percentage memory formats. Keep at least
 one metric while enabled. Login remains a native switch. Do not start the historical process monitors.
 
 Automatic cache/build cleanup uses a 24-hour minimum, dependencies seven days, and worktrees their

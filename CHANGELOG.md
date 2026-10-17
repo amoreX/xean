@@ -25,6 +25,8 @@ inherited BlitzClean version and identity fields.
 - Use a red exclamation badge instead of OS notifications or notification permission requests.
 - Place optional CPU, memory, and disk stats to the left of the eraser; stop their two-second sampling
   when disabled and retain individual metric/memory-format choices.
+- Put metric controls directly beneath Show menu bar stats, with its label and switch controlling their
+  visibility. Attach the native popover to a fixed eraser anchor so changing stats widths cannot offset it.
 
 ### Interface
 

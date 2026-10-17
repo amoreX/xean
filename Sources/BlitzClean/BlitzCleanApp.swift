@@ -16,6 +16,7 @@ enum BlitzCleanApp {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
   private var statusItem: NSStatusItem?
+  private var cleanerAnchor: CleanerStatusAnchor?
   private var cleanerPanel: CleanerPopover?
   private var cleanerHost: NSHostingController<CleanerView>?
   private var confirmingQuit = false
@@ -89,11 +90,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showCPU: false, showMemory: false, showDisk: false,
         memoryDisplay: .available, symbolName: "eraser.fill", symbolAtEnd: true), colored: false)
     let padding = max(4, NSStatusBar.system.thickness - icon.size.width)
-    menuBarAnimator = CleanerMenuBarAnimator(icon: icon) { [weak self, weak item] image in
+    if let button = item.button {
+      let anchor = CleanerStatusAnchor(in: button, trailingInset: padding / 2 + 1)
+      cleanerAnchor = anchor
+      warningBadge.translatesAutoresizingMaskIntoConstraints = false
+      anchor.addSubview(warningBadge)
+      NSLayoutConstraint.activate([
+        warningBadge.widthAnchor.constraint(equalToConstant: 11),
+        warningBadge.heightAnchor.constraint(equalToConstant: 11),
+        warningBadge.leadingAnchor.constraint(equalTo: anchor.trailingAnchor, constant: -6),
+        warningBadge.centerYAnchor.constraint(equalTo: anchor.centerYAnchor, constant: -3.5),
+      ])
+    }
+    menuBarAnimator = CleanerMenuBarAnimator(icon: icon) { [weak item] image in
       guard let item else { return }
       item.button?.image = image
       item.length = image.size.width + padding
-      self?.repositionCleaner()
     }
     statsSubscription = menuBarStats.$enabled.combineLatest(
       menuBarStats.$snapshot, menuBarStats.$display,
@@ -104,14 +116,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     .sink { [weak self] enabled, snapshot, display, warning in
       self?.updateMenuBarStats(
         enabled: enabled, snapshot: snapshot, display: display, warning: warning)
-    }
-    if let anchorWindow = item.button?.window {
-      NotificationCenter.default.addObserver(
-        self, selector: #selector(repositionCleaner), name: NSWindow.didMoveNotification,
-        object: anchorWindow)
-      NotificationCenter.default.addObserver(
-        self, selector: #selector(repositionCleaner), name: NSWindow.didResizeNotification,
-        object: anchorWindow)
     }
     NotificationCenter.default.addObserver(
       self, selector: #selector(closeCleaner),
@@ -159,16 +163,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       ? "BlitzClean · " + display.title(for: snapshot) : "BlitzClean · Clean up"
     if warning { button.toolTip = "Low disk space · " + (button.toolTip ?? "BlitzClean") }
     button.setAccessibilityLabel(button.toolTip)
-    if warningBadge.superview == nil { button.addSubview(warningBadge) }
     warningBadge.isHidden = !warning
-    positionWarningBadge()
-  }
-
-  private func positionWarningBadge() {
-    guard let button = statusItem?.button else { return }
-    let imageRect = button.cell?.imageRect(forBounds: button.bounds) ?? button.bounds
-    let iconMaxX = imageRect.maxX - 1
-    warningBadge.frame = NSRect(x: iconMaxX - 6, y: button.bounds.midY - 9, width: 11, height: 11)
   }
 
   @objc private func toggleCleaner() {
@@ -186,10 +181,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     if let globalClickMonitor { NSEvent.removeMonitor(globalClickMonitor) }
     localClickMonitor = nil
     globalClickMonitor = nil
-  }
-
-  @objc private func repositionCleaner() {
-    positionCleaner(animated: false)
   }
 
   @objc private func requestQuit() {
@@ -212,13 +203,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   private func positionCleaner(animated: Bool) {
-    positionWarningBadge()
     guard let cleaner, let button = statusItem?.button, let panel = cleanerPanel else { return }
-    let imageRect = button.cell?.imageRect(forBounds: button.bounds) ?? button.bounds
-    // Keep the native popover attached to the trailing eraser as stats grow leftward.
-    panel.updateAnchor(
-      NSRect(
-        x: imageRect.maxX - 19, y: button.bounds.minY, width: 18, height: button.bounds.height))
     cleanerHost?.rootView = CleanerView(
       model: cleaner, launchAtLogin: launchAtLogin, menuBarStats: menuBarStats,
       confirmingQuit: confirmingQuit,
@@ -236,7 +221,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   @objc func showCleaner() {
-    guard let cleaner, let button = statusItem?.button else { return }
+    guard let cleaner, let button = statusItem?.button, let cleanerAnchor else { return }
     if cleanerPanel == nil {
       let panel = CleanerPopover()
       let controller = NSHostingController(
@@ -253,9 +238,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     guard let panel = cleanerPanel, !panel.isPresented else { return }
     cleaner.panelClosed()
     confirmingQuit = false
-    repositionCleaner()
+    positionCleaner(animated: false)
+    button.layoutSubtreeIfNeeded()
     NSApp.activate(ignoringOtherApps: true)
-    panel.present(relativeTo: panel.anchorRect, of: button)
+    panel.present(relativeTo: cleanerAnchor.bounds, of: cleanerAnchor)
     button.highlight(true)
     localClickMonitor = NSEvent.addLocalMonitorForEvents(
       matching: [.leftMouseDown, .rightMouseDown, .keyDown]

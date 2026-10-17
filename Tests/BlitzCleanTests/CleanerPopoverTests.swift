@@ -23,12 +23,8 @@ struct CleanerPopoverTests {
       popover.close()
       window.orderOut(nil)
     }
-    popover.updateAnchor(anchor.bounds)
-    #expect(popover.anchorRect == anchor.bounds)
     #expect(!popover.isShown)
-    popover.present(relativeTo: popover.anchorRect, of: anchor)
-    popover.updateAnchor(anchor.bounds.insetBy(dx: 1, dy: 0))
-    #expect(popover.positioningRect == anchor.bounds.insetBy(dx: 1, dy: 0))
+    popover.present(relativeTo: anchor.bounds, of: anchor)
     popover.dismissAnimated()
     popover.present(relativeTo: anchor.bounds, of: anchor)
     try await Task.sleep(for: .milliseconds(250))
@@ -40,5 +36,48 @@ struct CleanerPopoverTests {
     try await Task.sleep(for: .milliseconds(250))
     #expect(!popover.isShown)
     #expect(dismissals == 1)
+  }
+
+  @Test func statsWidthChangesKeepTheEraserAndPopoverAtTheSameScreenPosition() async throws {
+    let screen = try #require(NSScreen.main).visibleFrame
+    let right = screen.midX + 100
+    let window = NSWindow(
+      contentRect: NSRect(x: right - 240, y: screen.maxY - 40, width: 240, height: 24),
+      styleMask: [.borderless], backing: .buffered, defer: false)
+    let button = try #require(window.contentView)
+    let anchor = CleanerStatusAnchor(in: button, trailingInset: 3)
+    window.orderFrontRegardless()
+    button.layoutSubtreeIfNeeded()
+    let popover = CleanerPopover()
+    let controller = NSHostingController(
+      rootView: Text("Stats anchor fixture").frame(width: 200, height: 100))
+    controller.sizingOptions = []
+    popover.contentViewController = controller
+    popover.contentSize = NSSize(width: 200, height: 100)
+    defer {
+      popover.close()
+      window.orderOut(nil)
+    }
+    popover.present(relativeTo: anchor.bounds, of: anchor)
+    try await Task.sleep(for: .milliseconds(250))
+    let originalFrame = try #require(popover.window).frame
+    let originalAnchor = window.convertToScreen(anchor.convert(anchor.bounds, to: nil))
+    #expect(anchor.bounds.width == 18)
+    #expect(abs(originalAnchor.midX - (right - 12)) < 0.5)
+    #expect(abs(originalFrame.midX - originalAnchor.midX) < 0.5)
+    #expect(anchor.hitTest(.zero) == nil)
+
+    for width: CGFloat in [120, 24, 160, 320, 240] {
+      window.setFrame(
+        NSRect(x: right - width, y: window.frame.minY, width: width, height: 24), display: true)
+      button.layoutSubtreeIfNeeded()
+      try await Task.sleep(for: .milliseconds(60))
+      let anchorOnScreen = window.convertToScreen(anchor.convert(anchor.bounds, to: nil))
+      let frame = try #require(popover.window).frame
+      #expect(abs(anchorOnScreen.midX - originalAnchor.midX) < 0.5)
+      #expect(abs(frame.midX - originalFrame.midX) < 0.5)
+      #expect(abs(frame.maxY - originalFrame.maxY) < 0.5)
+      #expect(popover.positioningRect == anchor.bounds)
+    }
   }
 }
