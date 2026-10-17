@@ -33,13 +33,13 @@ struct SystemDataCleanupTests {
     let rule = diagnosticRule(root)
     for name in ["personal.txt", "too-recent.ips"] {
       let url = try file(.init(root: root, name: name, days: 10))
-      let tree = try CacheCleaner.tree(.init(path: url.path, deadline: .now.addingTimeInterval(5)))
+      let tree = try CacheCleaner.tree(.init(path: url.path))
       let candidate = CacheCandidate(path: url.path, rule: rule, tree: tree)
       #expect(throws: CacheCleanError.self) { try CacheCleaner.delete(candidate) }
       #expect(FileManager.default.fileExists(atPath: url.path))
     }
     let old = try file(.init(root: root, name: "open.ips", days: 40))
-    let tree = try CacheCleaner.tree(.init(path: old.path, deadline: .now.addingTimeInterval(5)))
+    let tree = try CacheCleaner.tree(.init(path: old.path))
     let handle = try FileHandle(forReadingFrom: old)
     defer { try? handle.close() }
     #expect(throws: CacheCleanError.self) {
@@ -60,8 +60,7 @@ struct SystemDataCleanupTests {
     try FileManager.default.createDirectory(
       at: cache.deletingLastPathComponent(), withIntermediateDirectories: true)
     try FileManager.default.createSymbolicLink(at: cache, withDestinationURL: support)
-    let tree = try CacheCleaner.tree(
-      .init(path: personal.path, deadline: .now.addingTimeInterval(5)))
+    let tree = try CacheCleaner.tree(.init(path: personal.path))
     #expect(throws: CacheCleanError.self) {
       try CacheCleaner.delete(
         .init(path: browser.path + "/profile.db", rule: browser, tree: tree))

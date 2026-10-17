@@ -96,6 +96,18 @@ struct DockerStorageService: Sendable {
       .joined(separator: "\n")
   }
 
+  /// The cleaner dialog grants permission for build cache only, never images or user data.
+  func cleanBuildCache(minimumAgeDays: Int?) throws -> String {
+    let host = try localEndpoint()
+    var arguments = ["--host", host, "builder", "prune", "--all", "--force"]
+    if let minimumAgeDays {
+      arguments += ["--filter", "until=\(max(1, minimumAgeDays) * 24)h"]
+    }
+    return try run(
+      .init(arguments: arguments, timeout: 600)
+    ).standardOutput
+  }
+
   private func localEndpoint() throws -> String {
     let environment = ProcessInfo.processInfo.environment
     if environment["DOCKER_CONTEXT", default: ""].isEmpty,

@@ -32,6 +32,7 @@ struct DeveloperDiscovery: Sendable {
   let repositories: [String]
   let dependencies: [String]
   let limited: Bool
+  var projects: [String] = []
 }
 
 enum DeveloperArtifactScanner {
@@ -46,18 +47,20 @@ enum DeveloperArtifactScanner {
 
   struct DiscoveryRequest: Sendable {
     let roots: [String]
-    let maximumEntries: Int
-    let maximumDepth: Int
+    var maximumEntries: Int? = nil
+    var maximumDepth: Int? = nil
   }
 
   static func discover(_ request: DiscoveryRequest) -> DeveloperDiscovery {
     var repositories: Set<String> = []
     var dependencies: Set<String> = []
+    var projects: Set<String> = []
     var visited: Set<String> = []
-    var remaining = request.maximumEntries
+    var visitedEntries = 0
     var limited = false
     let ignored: Set<String> = [
-      ".git", ".next", ".build", ".pnpm", ".venv", "Pods", "build", "dist", "Library", ".Trash",
+      ".git", ".next", ".nuxt", ".svelte-kit", ".turbo", ".parcel-cache", ".build", ".pnpm",
+      ".venv", "Pods", "build", "dist", "target", "Library", ".Trash",
     ]
     let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey, .isPackageKey]
     for root in Set(request.roots).sorted() {
@@ -76,11 +79,11 @@ enum DeveloperArtifactScanner {
           })
       else { continue }
       for case let child as URL in enumerator {
-        if remaining <= 0 || Task.isCancelled {
+        if request.maximumEntries.map({ visitedEntries >= $0 }) == true || Task.isCancelled {
           limited = true
           break
         }
-        remaining -= 1
+        visitedEntries += 1
         guard let values = try? child.resourceValues(forKeys: keys) else {
           limited = true
           continue
@@ -92,7 +95,11 @@ enum DeveloperArtifactScanner {
         }
         if name == ".git" {
           repositories.insert(child.deletingLastPathComponent().path)
-          enumerator.skipDescendants()
+          if values.isDirectory == true { enumerator.skipDescendants() }
+        } else if ["package.json", "Cargo.toml", "Package.swift"].contains(name),
+          values.isDirectory != true
+        {
+          projects.insert(child.deletingLastPathComponent().path)
         } else if values.isDirectory == true {
           if name == "node_modules" {
             dependencies.insert(child.path)
@@ -101,18 +108,17 @@ enum DeveloperArtifactScanner {
             || !visited.insert(child.path).inserted
           {
             enumerator.skipDescendants()
-          } else if enumerator.level >= request.maximumDepth {
+          } else if let maximumDepth = request.maximumDepth, enumerator.level >= maximumDepth {
             limited = true
             enumerator.skipDescendants()
           }
         }
       }
-      if remaining <= 0 || Task.isCancelled { break }
+      if request.maximumEntries.map({ visitedEntries >= $0 }) == true || Task.isCancelled { break }
     }
     return .init(
-      repositories: Array(repositories.sorted().prefix(150)),
-      dependencies: Array(dependencies.sorted().prefix(300)),
-      limited: limited || repositories.count > 150 || dependencies.count > 300)
+      repositories: repositories.sorted(), dependencies: dependencies.sorted(),
+      limited: limited, projects: projects.sorted())
   }
 
   struct DependencyRequest: Sendable {

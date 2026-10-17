@@ -1,126 +1,329 @@
 import AppKit
+import Combine
 import SwiftUI
 
-struct BlitzCleanApp: App {
-  @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-  @StateObject private var monitor = SystemMonitor()
-  @StateObject private var launchAtLogin = LaunchAtLoginController()
-  @StateObject private var storageBreakdown = StorageBreakdownModel()
-  @StateObject private var dockerStorage = DockerStorageModel()
-  @StateObject private var memoryRescue = MemoryRescueModel()
-  @StateObject private var appRecovery = AppRecoveryModel()
-  @StateObject private var permissions = PermissionsModel()
-  @StateObject private var devProcesses = DevProcessModel()
-  @StateObject private var folderExplorer = FolderExplorerModel()
-  @StateObject private var workspaces = WorkspaceController()
-  @StateObject private var developerBrowser = DeveloperBrowserModel()
-
-  @StateObject private var quickClean = QuickCleanModel()
-  @StateObject private var cleanNavigation = CleanNavigation()
-
-  var body: some Scene {
-    MenuBarExtra {
-      BlitzTrayView(
-        monitor: monitor, memory: memoryRescue, recovery: appRecovery,
-        navigation: cleanNavigation, updates: appDelegate.updates)
-    } label: {
-      MenuBarHealthLabel(
-        snapshot: monitor.snapshot, risk: max(memoryRescue.risk, memoryRescue.capacity.risk)
-      )
-      .environmentObject(cleanNavigation)
-    }
-    .menuBarExtraStyle(.window)
-
-    Window(AppBrand.name, id: "dashboard") {
-      BlitzDashboardView(
-        monitor: monitor, memory: memoryRescue, cleanup: quickClean,
-        storage: storageBreakdown, navigation: cleanNavigation,
-        developerBrowser: developerBrowser, processes: devProcesses, workspaces: workspaces,
-        services: .init(
-          recovery: appRecovery, permissions: permissions, docker: dockerStorage,
-          folders: folderExplorer,
-          launchAtLogin: launchAtLogin, updates: appDelegate.updates)
-      )
-      .background(DashboardWindowLifecycle())
-    }
-    .windowStyle(.hiddenTitleBar)
-    .defaultSize(width: 1080, height: 820)
-    .opensOnlyOnRequest()
-    .commands {
-      CommandGroup(replacing: .sidebar) {}
-      CommandGroup(replacing: .appTermination) {
-        Button("Close dashboard") { NSApp.terminate(nil) }.keyboardShortcut("q")
-      }
-      CommandGroup(replacing: .newItem) {
-        Button("Open BlitzClean") {
-          NotificationCenter.default.post(name: .openWorkspace, object: nil)
-        }.keyboardShortcut("0")
-      }
-      CommandGroup(replacing: .appSettings) {
-        Button("Settings…") {
-          cleanNavigation.page = .settings
-          NotificationCenter.default.post(name: .openWorkspace, object: nil)
-        }.keyboardShortcut(",")
-      }
-      CommandMenu("Tools") {
-        Button("Revive frozen app…") {
-          NotificationCenter.default.post(name: .openAppRecovery, object: nil)
-        }.keyboardShortcut("r", modifiers: [.command, .shift])
-      }
-    }
-
+@MainActor
+enum BlitzCleanApp {
+  static func main() {
+    let app = NSApplication.shared
+    let delegate = AppDelegate()
+    app.delegate = delegate
+    app.setActivationPolicy(.accessory)
+    withExtendedLifetime(delegate) { app.run() }
   }
 }
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-  let updates = AppUpdateController()
+  private var statusItem: NSStatusItem?
+  private var cleanerPanel: CleanerPopoverPanel?
+  private var cleanerHost: NSHostingController<CleanerView>?
+  private var cleanerTargetFrame: NSRect?
+  private var confirmingQuit = false
+  private let launchAtLogin = LaunchAtLoginController()
+  private let menuBarStats = CleanerMenuBarStats()
+  private var statsSubscription: AnyCancellable?
+  private var menuBarAnimator: CleanerMenuBarAnimator?
+  private let warningBadge = CleanerWarningBadge()
+  private var localClickMonitor: Any?
+  private var globalClickMonitor: Any?
+  private var cleaner: CleanerModel?
 
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-    guard
-      AppQuitPolicy.keepsMonitoring(
-        .init(
-          explicitStop: AppLifetime.explicitStop,
-          event: NSAppleEventManager.shared().currentAppleEvent))
-    else { return .terminateNow }
-    AppLifetime.closeDashboard(sender)
-    return .terminateCancel
+    closeCleaner()
+    cleaner?.stop()
+    menuBarStats.stop()
+    menuBarAnimator?.stop()
+    return .terminateNow
   }
 
-  func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-    false
-  }
+  func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool
   {
-    NotificationCenter.default.post(name: .openWorkspace, object: nil)
+    showCleaner()
     return true
   }
 
-  func applicationShouldSaveSecureApplicationState(_ app: NSApplication) -> Bool {
-    false
-  }
-
-  func applicationShouldRestoreSecureApplicationState(_ app: NSApplication) -> Bool {
-    false
-  }
+  func applicationShouldSaveSecureApplicationState(_ app: NSApplication) -> Bool { false }
+  func applicationShouldRestoreSecureApplicationState(_ app: NSApplication) -> Bool { false }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    NSApp.appearance = NSAppearance(named: .darkAqua)
-    updates.start()
-  }
-}
-
-extension Scene {
-  fileprivate func opensOnlyOnRequest() -> some Scene {
-    if #available(macOS 15.0, *) {
-      return SceneBuilder.buildOptional(
-        SceneBuilder.buildLimitedAvailability(
-          defaultLaunchBehavior(.suppressed).restorationBehavior(.disabled)))
-    } else {
-      return SceneBuilder.buildOptional(SceneBuilder.buildLimitedAvailability(self))
+    NSApp.setActivationPolicy(.accessory)
+    NSApp.appearance = NSAppearance(named: .aqua)
+    let menu = NSMenu()
+    let applicationItem = NSMenuItem()
+    let applicationMenu = NSMenu(title: "BlitzClean")
+    let open = NSMenuItem(
+      title: "Open cleaner…", action: #selector(showCleaner), keyEquivalent: ",")
+    open.target = self
+    applicationMenu.addItem(open)
+    applicationMenu.addItem(.separator())
+    let quit = NSMenuItem(
+      title: "Quit BlitzClean", action: #selector(requestQuit), keyEquivalent: "q")
+    quit.target = self
+    applicationMenu.addItem(quit)
+    applicationItem.submenu = applicationMenu
+    menu.addItem(applicationItem)
+    let windowItem = NSMenuItem()
+    let windowMenu = NSMenu(title: "Window")
+    let close = NSMenuItem(
+      title: "Close", action: #selector(closeCleaner), keyEquivalent: "w")
+    close.target = self
+    windowMenu.addItem(close)
+    windowItem.submenu = windowMenu
+    menu.addItem(windowItem)
+    NSApp.mainMenu = menu
+    NSApp.windowsMenu = windowMenu
+    let model = CleanerModel()
+    cleaner = model
+    let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    item.button?.image = NSImage(
+      systemSymbolName: "eraser.fill", accessibilityDescription: "Open BlitzClean cleaner")
+    item.button?.image?.isTemplate = true
+    item.button?.toolTip = "BlitzClean · Clean up"
+    item.button?.target = self
+    item.button?.action = #selector(toggleCleaner)
+    statusItem = item
+    let icon = MenuBarLabelRenderer.image(
+      content: MenuBarMetrics(
+        snapshot: .empty, risk: .normal, showHealth: false,
+        showCPU: false, showMemory: false, showDisk: false,
+        memoryDisplay: .available, symbolName: "eraser.fill", symbolAtEnd: true), colored: false)
+    let padding = max(4, NSStatusBar.system.thickness - icon.size.width)
+    menuBarAnimator = CleanerMenuBarAnimator(icon: icon) { [weak self, weak item] image in
+      guard let item else { return }
+      item.button?.image = image
+      item.length = image.size.width + padding
+      self?.repositionCleaner()
+    }
+    statsSubscription = menuBarStats.$enabled.combineLatest(
+      menuBarStats.$snapshot, menuBarStats.$display,
+      model.$available.combineLatest(model.$preferences).map { available, preferences in
+        preferences.warningsEnabled && preferences.isBelowThreshold(available)
+      }.removeDuplicates()
+    )
+    .sink { [weak self] enabled, snapshot, display, warning in
+      self?.updateMenuBarStats(
+        enabled: enabled, snapshot: snapshot, display: display, warning: warning)
+    }
+    if let anchorWindow = item.button?.window {
+      NotificationCenter.default.addObserver(
+        self, selector: #selector(repositionCleaner), name: NSWindow.didMoveNotification,
+        object: anchorWindow)
+      NotificationCenter.default.addObserver(
+        self, selector: #selector(repositionCleaner), name: NSWindow.didResizeNotification,
+        object: anchorWindow)
+    }
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(closeCleaner),
+      name: NSApplication.didChangeScreenParametersNotification,
+      object: nil)
+    NSWorkspace.shared.notificationCenter.addObserver(
+      self, selector: #selector(closeCleaner), name: NSWorkspace.activeSpaceDidChangeNotification,
+      object: nil)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(showCleaner), name: .openWorkspace, object: nil)
+    model.start()
+    menuBarStats.start()
+    // A normal launch stays in the menu bar; an explicit request opens the dialog.
+    if CommandLine.arguments.contains("--cleaner") || CommandLine.arguments.contains("--workspace")
+    {
+      showCleaner()
     }
   }
+
+  func applicationDidResignActive(_ notification: Notification) {
+    closeCleaner()
+  }
+
+  private func updateMenuBarStats(
+    enabled: Bool, snapshot: SystemSnapshot?, display: CleanerMenuBarStats.Display, warning: Bool
+  ) {
+    guard let button = statusItem?.button else { return }
+    button.imagePosition = .imageOnly
+    button.title = ""
+    let image: NSImage?
+    if enabled {
+      image = MenuBarLabelRenderer.image(
+        content: MenuBarMetrics(
+          snapshot: snapshot ?? .empty, risk: .normal, showHealth: false,
+          showCPU: display.showCPU, showMemory: display.showMemory, showDisk: display.showDisk,
+          memoryDisplay: display.memoryDisplay, symbolName: "eraser.fill", symbolAtEnd: true),
+        colored: false)
+    } else {
+      image = nil
+    }
+    menuBarAnimator?.update(
+      image: image, animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+    button.toolTip =
+      enabled
+      ? "BlitzClean · " + display.title(for: snapshot) : "BlitzClean · Clean up"
+    if warning { button.toolTip = "Low disk space · " + (button.toolTip ?? "BlitzClean") }
+    button.setAccessibilityLabel(button.toolTip)
+    if warningBadge.superview == nil { button.addSubview(warningBadge) }
+    warningBadge.isHidden = !warning
+    positionWarningBadge()
+  }
+
+  private func positionWarningBadge() {
+    guard let button = statusItem?.button else { return }
+    let imageRect = button.cell?.imageRect(forBounds: button.bounds) ?? button.bounds
+    let iconMaxX = imageRect.maxX - 1
+    warningBadge.frame = NSRect(x: iconMaxX - 6, y: button.bounds.midY - 9, width: 11, height: 11)
+  }
+
+  @objc private func toggleCleaner() {
+    if cleanerPanel?.isPresented == true {
+      closeCleaner()
+    } else {
+      showCleaner()
+    }
+  }
+
+  @objc private func closeCleaner() {
+    cleanerPanel?.dismissAnimated()
+    statusItem?.button?.highlight(false)
+    if let localClickMonitor { NSEvent.removeMonitor(localClickMonitor) }
+    if let globalClickMonitor { NSEvent.removeMonitor(globalClickMonitor) }
+    localClickMonitor = nil
+    globalClickMonitor = nil
+  }
+
+  @objc private func repositionCleaner() {
+    positionCleaner(animated: false)
+  }
+
+  @objc private func requestQuit() {
+    if cleanerPanel?.isPresented != true { showCleaner() }
+    setQuitConfirmation(true)
+  }
+
+  private func setQuitConfirmation(_ confirming: Bool) {
+    guard confirmingQuit != confirming else { return }
+    confirmingQuit = confirming
+    positionCleaner(animated: true)
+  }
+
+  private func cancelCleaner() {
+    if confirmingQuit {
+      setQuitConfirmation(false)
+    } else {
+      closeCleaner()
+    }
+  }
+
+  private func positionCleaner(animated: Bool) {
+    positionWarningBadge()
+    guard let cleaner, let button = statusItem?.button, let anchorWindow = button.window,
+      let screen = anchorWindow.screen, let panel = cleanerPanel
+    else { return }
+    let imageRect = button.cell?.imageRect(forBounds: button.bounds) ?? button.bounds
+    // Stats grow leftward from the eraser, keeping the icon and its popover stationary.
+    let iconRect = NSRect(
+      x: imageRect.maxX - 19, y: button.bounds.minY,
+      width: 18, height: button.bounds.height)
+    let anchor = anchorWindow.convertToScreen(button.convert(iconRect, to: nil))
+    let placement = CleanerPopoverPlacement(
+      anchor: anchor, visibleFrame: screen.visibleFrame,
+      contentHeight: confirmingQuit ? CleanerPopoverPlacement.quitContentHeight : 580)
+    cleanerHost?.rootView = CleanerView(
+      model: cleaner, launchAtLogin: launchAtLogin, menuBarStats: menuBarStats,
+      presentation: panel.presentation,
+      pointerX: placement.pointerX, confirmingQuit: confirmingQuit,
+      onQuitRequest: { [weak self] in self?.requestQuit() },
+      onQuitCancel: { [weak self] in self?.setQuitConfirmation(false) })
+    guard cleanerTargetFrame != placement.frame else { return }
+    cleanerTargetFrame = placement.frame
+    if animated && panel.isPresented && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+      NSAnimationContext.runAnimationGroup { context in
+        context.duration = 0.3
+        context.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
+        panel.animator().setFrame(placement.frame, display: true)
+      }
+    } else {
+      panel.setFrame(placement.frame, display: true)
+    }
+    panel.invalidateShadow()
+  }
+
+  @objc func showCleaner() {
+    guard let cleaner, let button = statusItem?.button else { return }
+    if cleanerPanel == nil {
+      let panel = CleanerPopoverPanel(
+        contentRect: .zero, styleMask: [.borderless], backing: .buffered, defer: false)
+      let controller = NSHostingController(
+        rootView: CleanerView(
+          model: cleaner, launchAtLogin: launchAtLogin, menuBarStats: menuBarStats,
+          presentation: panel.presentation))
+      controller.sizingOptions = []
+      panel.title = "BlitzClean"
+      panel.contentViewController = controller
+      panel.isOpaque = false
+      panel.backgroundColor = .clear
+      panel.hasShadow = false
+      panel.isMovable = false
+      panel.isMovableByWindowBackground = false
+      panel.isReleasedWhenClosed = false
+      panel.hidesOnDeactivate = false
+      panel.level = .floating
+      panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary, .transient]
+      panel.dismiss = { [weak self] in self?.cancelCleaner() }
+      cleanerHost = controller
+      cleanerPanel = panel
+    }
+    guard let panel = cleanerPanel, !panel.isPresented else { return }
+    confirmingQuit = false
+    repositionCleaner()
+    NSApp.activate(ignoringOtherApps: true)
+    panel.present()
+    button.highlight(true)
+    localClickMonitor = NSEvent.addLocalMonitorForEvents(
+      matching: [.leftMouseDown, .rightMouseDown, .keyDown]
+    ) { [weak self] event in
+      let dismissKey = MainActor.assumeIsolated {
+        guard let self else { return false }
+        if event.type == .keyDown {
+          if event.keyCode == 53 && NSApp.modalWindow == nil {
+            self.cancelCleaner()
+            return true
+          }
+          return false
+        }
+        if event.window !== self.cleanerPanel,
+          event.window !== self.statusItem?.button?.window, NSApp.modalWindow == nil
+        {
+          self.closeCleaner()
+        }
+        return false
+      }
+      return dismissKey ? nil : event
+    }
+    globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [
+      .leftMouseDown, .rightMouseDown,
+    ]) {
+      [weak self] _ in
+      Task { @MainActor in self?.closeCleaner() }
+    }
+    Task {
+      await cleaner.refreshDisk()
+    }
+  }
+
+}
+
+@MainActor
+final class CleanerWarningBadge: NSImageView {
+  init() {
+    super.init(frame: .zero)
+    image = NSImage(systemSymbolName: "exclamationmark.circle.fill", accessibilityDescription: nil)
+    contentTintColor = .systemRed
+    imageScaling = .scaleProportionallyUpOrDown
+    setAccessibilityElement(false)
+  }
+
+  required init?(coder: NSCoder) { return nil }
+  override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
 struct InitialWindowRequest {

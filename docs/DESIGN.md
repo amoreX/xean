@@ -1,5 +1,114 @@
 # Product design
 
+## October 17 cleaner fork
+
+The current user requested a cleaner-only menu bar utility. This supersedes the dashboard, tray statistics,
+navigation and background monitoring decisions below for this fork. One template eraser icon opens one
+fixed 420 × 592-point popover directly below that icon. Optional CPU, memory and free-disk
+stats use the original BlitzClean menu bar icons, typography and rendering beside the eraser.
+An expandable Stats shown control selects individual metrics, including a single metric, and the
+original available/used/percentage memory formats. Keep at least one metric while enabled.
+Indent Stats shown and its options one level below Show menu bar stats; its whole row toggles the options, with the chevron
+at the trailing edge aligned with the switches.
+Show menu bar stats is enabled by default, persists its choice and stops
+two-second metrics sampling when disabled. Use the lightweight system metrics provider without starting
+process monitors or history collection. The pointer remains anchored to the eraser when the label grows.
+Place stats to the left of the eraser. Show and hide them by fading their ink while easing the status
+item's width leftward over 280 ms. Keep the eraser at the trailing edge so it and the popover stay in
+place, including when toggles reverse midway through the transition. Reduce Motion applies the new size immediately.
+Its outline has a short 12-point glass pointer with a pointed tip and curved shoulders at the top,
+centered under the icon whenever the screen has room. At screen edges, keep the panel onscreen and
+shift the pointer to stay aligned with the icon. The pointer and body share one continuous material;
+there is no separate dark arrow. A borderless panel provides this custom shape. It cannot move, resize
+or detach. Clip the glass to the shape and disable the native panel shadow to avoid an extra outline.
+Clicking the icon again,
+clicking outside, Escape or ⌘W dismisses it while disk checks keep running; Quit exits. The popover owns category
+checkboxes, free-space thresholds, separate Low-space warning and Auto-clean switches, an automatic worktree age limit,
+direct manual removal and launch at login. Automatic deletion is explicit opt-in
+and uses the same revalidation as manual cleanup. The user's later request replaces dark/mint styling with
+an off-white canvas, charcoal actions, gray text and compact spacing. Shared buttons, segments
+and checkboxes use the paper palette through the environment; historical surfaces keep their dark defaults.
+The header is one row: lowercase “xean”, the available space as “71.9 GB free”, and an accessible power icon.
+Power and ⌘Q replace the popover's contents with one compact row: “Quit xean?”, Cancel and Quit.
+The same window shrinks to 72 points high over 300 ms, keeping its top edge and pointer anchored;
+no modal or sheet is opened. Use 20-point horizontal and 16-point vertical padding, rounded capsule
+buttons and a 28-point outer radius. Omit the explanatory subtitle and empty vertical space.
+Metrics refreshes must not interrupt a resize already heading to the same frame.
+Cancel or Escape restores the cleaner and its selections. Reopening after dismissal starts in the cleaner.
+Reduce Motion makes the content swap and resize immediate.
+Apply the relevant native equivalents of [Baseline UI](https://github.com/ibelick/ui-skills/blob/main/skills/baseline-ui/SKILL.md):
+clear hierarchy, accessible native controls, tabular values, minimal decoration and feedback beside actions.
+The idle footer has only one right-aligned Clean button and no hint text. Per the latest user request,
+Clean scans and deletes eligible selected data in one operation, with no review list or second confirmation.
+Keep scanning and removal
+feedback to the left of Clean in the same footer row; omit the Scan details disclosure and its skipped-path list from the dialog.
+Individual and bulk cleanup results use a compact item count and size, then fade out after five seconds.
+New progress messages cancel the previous result's dismissal. Omit the persistent Last cleanup and
+available-space-gain paragraphs from the dialog; retain saved history internally.
+Clean stays visible and disabled while busy, with progress beside it and no Stop button. Cuelume supplies subtle interaction sounds;
+interaction audio is always enabled at 70%, with no sound settings. Opening or closing the dialog is silent. See CLEANER.md.
+
+Low-space warnings use a red exclamation badge on the menu bar eraser and beside the free-space
+value in the header. They clear when space recovers; there are no macOS notifications or permission controls.
+Each category's title and chevron expand an item list independently of its bulk-selection checkbox.
+Eligible items show a path, size and a direct individual Delete action. Successful removals leave the list
+immediately; failed removals stay with their reason beside the item. Worktrees also
+show their branch; protected checkouts show a reason instead of Delete. Keep these lists unboxed.
+Only show dropdown entries measured at 50 MB or larger, including protected entries; omit small
+or unmeasured entries. This display filter does not change bulk cleanup eligibility.
+Reuse completed manual category scans for 30 seconds, including when Clean follows a dropdown scan.
+Reopening an older or invalidated category clears its previous items before revealing Checking…, with
+a small progress indicator beside the chevron. There is no Refresh button. Scan only missing or expired
+categories; automatic cleanup still scans with its age policy and all removals revalidate the files. Expand and collapse a clipped, measured
+height with a non-bouncing 400 ms spring, including changes when fresh results arrive. Preserve full content layout during the
+transition and keep the footer height steady while checking a category. Reduce Motion disables the animation.
+
+The later Liquid Glass request uses the open-source `metneo/LiquidGlass` package. The user's follow-up
+removes the repeated section cards: use one continuous glass backdrop, with unboxed content grouped by
+compact spacing without horizontal dividers or row borders. The footer shares the same background as the content. The header power icon has no surrounding glass button. Clip glass buttons to their continuous rounded outlines so no dark shadow or strip extends below them. Glass remains on primary/secondary buttons, selected
+segments, checkboxes and numeric inputs. The popover has no title bar or window controls. Keep the
+white/gray palette and charcoal primary actions; do not add decorative artwork or multicolor backgrounds.
+Keep standard button/toggle semantics and clear selection states. Manual cleanup acts directly;
+Auto-clean still needs its explicit opt-in.
+On the glass cleaner surface, use macOS's native switch rendering through BlitzSwitchStyle. Omit
+the extra glass background and highlight overlay that created a halo around the small switches.
+Settings toggles, threshold rows and disclosure rows use the same compact 34-point height, with no
+extra gap above the threshold. Retain the one-level indentation of subordinate controls.
+Category checkboxes use crisp charcoal fills, translucent white unchecked fills, continuous rounded corners
+and a semibold white checkmark. Avoid a separate glass blur or shadow around each tiny checkbox.
+Reduce Transparency and Increase Contrast use opaque surfaces; Reduce Motion suppresses custom
+press/toggle motion. The cleaner hides its scrollbar. As rows cross the top or bottom of the scroll
+viewport, they shrink slightly and soften into a short edge fade; the header and footer remain fixed.
+Use scroll-position-driven visual effects so layout and native scrolling stay stable. Reduce Motion
+disables scaling and blur, and Increase Contrast also removes the edge fade. Pad the content so the
+first and last controls remain fully readable at rest. Other macOS windows such as the folder chooser
+remain native.
+
+There are no mode tabs. Auto-clean is the first row below the header, with its own editable GB limit
+and switch. “Notify when low” follows immediately beneath it, with a separate free-space limit indented
+one level below its switch. Existing saved shared limits migrate to both settings. Keep the red badge
+behavior and fixed check interval. Enabling Auto-clean crossfades its row into “Auto-clean below [GB]?”,
+Cancel and OK over 320 ms; the limit remains editable in the confirmation. Both presentations occupy
+the same 34-point row, so no extra confirmation line or scroll movement appears. Cancel and OK restore
+the toggle row in place. Keep invisible controls out of hit testing and accessibility. Reduce Motion
+makes the swap immediate. Both switches off means manual cleanup only.
+Settings expand over 220 ms. Mouse-wheel steps ease over 180 ms while trackpad gestures retain native
+momentum; Reduce Motion keeps wheel scrolling immediate. Opening and closing the panel uses a
+non-bouncing spring fade and 97.5–100% scale over 460/360 ms, anchored at the menu-bar pointer.
+Keep the window frame and content layout fixed during this motion. Hide the window only after the
+visual animation finishes; a rapid reopen reverses the existing motion and invalidates a pending close.
+Reduce Motion applies visibility immediately with no scaling.
+The check interval is fixed at 25 minutes; remove its editor and ignore old saved intervals. Remove the
+sound settings and ignore saved sound preferences. Remove the Project folders control and the helper
+subtitle below the free-space limit; scanning still discovers common project locations automatically.
+Automatic cache and build cleanup uses a 24-hour minimum. Manual Clean skips this cutoff in scanning
+and deletion while retaining activity and identity checks. Manual worktree removal also skips the age
+limit; automatic worktree cleanup retains its configured age. Manual dependency cleanup also has no
+age cutoff; automatic dependency cleanup retains seven days. Nested package links are fingerprinted
+without following their destinations; linked cleanup roots remain protected. Omit the age-policy helper line.
+
+Historical dashboard components remain available to upstream tests but are not instantiated by the app.
+
 ## User requirements
 
 The September 26, 2026 redesign brief asks for Apple/Linear-level restraint,

@@ -82,8 +82,10 @@ enum BlitzControlMetrics {
 
 struct BlitzButtonStyle: ButtonStyle {
   let emphasis: BlitzButtonEmphasis
+  @Environment(\.blitzPalette) private var palette
   @Environment(\.isEnabled) private var isEnabled
   @Environment(\.controlSize) private var controlSize
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var isHovered = false
 
   init(_ emphasis: BlitzButtonEmphasis) {
@@ -102,11 +104,11 @@ struct BlitzButtonStyle: ButtonStyle {
       .background(fill, in: RoundedRectangle(cornerRadius: BlitzUI.controlRadius))
       .overlay {
         RoundedRectangle(cornerRadius: BlitzUI.controlRadius)
-          .strokeBorder(emphasis == .secondary ? BlitzUI.panelStroke : .clear, lineWidth: 1)
+          .strokeBorder(emphasis == .secondary ? palette.panelStroke : .clear, lineWidth: 1)
           .allowsHitTesting(false)
       }
-      .scaleEffect(configuration.isPressed && isEnabled ? 0.97 : 1)
-      .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+      .scaleEffect(configuration.isPressed && isEnabled && !reduceMotion ? 0.97 : 1)
+      .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
       .opacity(isEnabled ? (configuration.isPressed ? 0.88 : 1) : 0.4)
       .contentShape(RoundedRectangle(cornerRadius: BlitzUI.controlRadius))
       .onHover { isHovered = $0 }
@@ -116,19 +118,19 @@ struct BlitzButtonStyle: ButtonStyle {
   private func foreground(_ role: ButtonRole?) -> Color {
     if role == .destructive, emphasis != .accent { return BlitzUI.recordRed }
     switch emphasis {
-    case .accent, .emphasized: return .black.opacity(0.88)
-    case .secondary: return BlitzUI.primaryText
-    case .quiet: return isHovered && isEnabled ? BlitzUI.primaryText : BlitzUI.secondaryText
+    case .accent, .emphasized: return palette.onAccent
+    case .secondary: return palette.primaryText
+    case .quiet: return isHovered && isEnabled ? palette.primaryText : palette.secondaryText
     }
   }
 
   private var fill: Color {
     let hovered = isHovered && isEnabled
     switch emphasis {
-    case .accent: return hovered ? BlitzUI.mint.opacity(0.9) : BlitzUI.mint
-    case .emphasized: return hovered ? .white : BlitzUI.primaryText
-    case .secondary: return hovered ? BlitzUI.hoverFill : BlitzUI.controlFill
-    case .quiet: return hovered ? BlitzUI.quietFill : .clear
+    case .accent: return hovered ? palette.accent.opacity(0.9) : palette.accent
+    case .emphasized: return hovered ? palette.primaryText.opacity(0.9) : palette.primaryText
+    case .secondary: return hovered ? palette.hoverFill : palette.controlFill
+    case .quiet: return hovered ? palette.quietFill : .clear
     }
   }
 }
@@ -168,16 +170,25 @@ extension View {
 
 struct BlitzSelectionButtonStyle: ButtonStyle {
   let isSelected: Bool
+  var drawsSelection = true
+  @Environment(\.blitzPalette) private var palette
+  @Environment(\.blitzGlassEnabled) private var usesGlass
   @Environment(\.isEnabled) private var isEnabled
   @State private var isHovered = false
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .foregroundStyle(isSelected ? BlitzUI.primaryText : BlitzUI.secondaryText)
-      .background(
-        isSelected ? BlitzUI.selectedFill : isHovered ? BlitzUI.quietFill : .clear,
-        in: RoundedRectangle(cornerRadius: 6)
-      )
+      .foregroundStyle(isSelected ? palette.primaryText : palette.secondaryText)
+      .background {
+        if !drawsSelection {
+          RoundedRectangle(cornerRadius: 6).fill(isHovered ? palette.quietFill : .clear)
+        } else if usesGlass && isSelected {
+          BlitzGlassBackground(radius: 9)
+        } else {
+          RoundedRectangle(cornerRadius: 6)
+            .fill(isSelected ? palette.selectedFill : isHovered ? palette.quietFill : .clear)
+        }
+      }
       .contentShape(RoundedRectangle(cornerRadius: 6))
       .opacity(isEnabled ? configuration.isPressed ? 0.76 : 1 : 0.4)
       .onHover { isHovered = $0 }
@@ -193,6 +204,9 @@ extension View {
 }
 
 struct BlitzSegmentedPicker<Value: Hashable>: View {
+  @Environment(\.blitzPalette) private var palette
+  @Environment(\.blitzGlassEnabled) private var usesGlass
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let title: String
   let options: [Value]
   @Binding var selection: Value
@@ -206,11 +220,28 @@ struct BlitzSegmentedPicker<Value: Hashable>: View {
           Text(label(value)).font(BlitzType.label).lineLimit(1)
             .frame(maxWidth: .infinity, minHeight: 30).padding(.horizontal, 10)
             .contentShape(Rectangle())
-        }.buttonStyle(BlitzSelectionButtonStyle(isSelected: value == selection))
-          .accessibilityAddTraits(selection == value ? .isSelected : [])
+        }.buttonStyle(
+          BlitzSelectionButtonStyle(isSelected: value == selection, drawsSelection: !usesGlass)
+        )
+        .accessibilityAddTraits(selection == value ? .isSelected : [])
       }
-    }.blitzChipGroup()
-      .accessibilityElement(children: .contain).accessibilityLabel(title)
+    }
+    .background(alignment: .leading) {
+      if usesGlass, let selectedIndex = options.firstIndex(of: selection) {
+        GeometryReader { proxy in
+          let width =
+            (proxy.size.width - CGFloat(max(0, options.count - 1)) * 2)
+            / CGFloat(max(1, options.count))
+          BlitzGlassBackground(radius: 9)
+            .frame(width: width, height: proxy.size.height)
+            .offset(x: CGFloat(selectedIndex) * (width + 2))
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: selection)
+        }.allowsHitTesting(false).accessibilityHidden(true)
+      }
+    }
+    .padding(2)
+    .background(palette.controlFill, in: RoundedRectangle(cornerRadius: BlitzUI.controlRadius))
+    .accessibilityElement(children: .contain).accessibilityLabel(title)
   }
 }
 
@@ -564,9 +595,26 @@ extension View {
 
 struct BlitzSwitchStyle: ToggleStyle {
   var showsLabel = true
+  @Environment(\.blitzGlassEnabled) private var usesGlass
+  @Environment(\.blitzPalette) private var palette
 
   func makeBody(configuration: Configuration) -> some View {
-    BlitzToggleBody(configuration: configuration, kind: .switch, showsLabel: showsLabel)
+    if usesGlass {
+      HStack(spacing: 12) {
+        if showsLabel {
+          configuration.label
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture { configuration.isOn.toggle() }
+            .accessibilityHidden(true)
+        }
+        Toggle(configuration).labelsHidden()
+      }
+      .toggleStyle(.switch).controlSize(.regular).tint(palette.accent)
+      .frame(minHeight: 34)
+    } else {
+      BlitzToggleBody(configuration: configuration, kind: .switch, showsLabel: showsLabel)
+    }
   }
 }
 
@@ -584,12 +632,15 @@ private struct BlitzToggleBody: View {
   let configuration: ToggleStyleConfiguration
   let kind: Kind
   let showsLabel: Bool
+  @Environment(\.blitzPalette) private var palette
+  @Environment(\.blitzGlassEnabled) private var usesGlass
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.isEnabled) private var isEnabled
   @State private var hovered = false
 
   var body: some View {
     Button {
-      withAnimation(.easeOut(duration: 0.14)) { configuration.isOn.toggle() }
+      withAnimation(reduceMotion ? nil : .easeOut(duration: 0.14)) { configuration.isOn.toggle() }
     } label: {
       HStack(spacing: 10) {
         if kind == .checkbox { indicator }
@@ -613,22 +664,30 @@ private struct BlitzToggleBody: View {
     let on = configuration.isOn
     switch kind {
     case .switch:
-      Capsule().fill(on ? BlitzUI.mint : hovered ? BlitzUI.strongFill : BlitzUI.selectedFill)
+      Capsule().fill(on ? palette.accent : palette.strongFill)
         .overlay(alignment: on ? .trailing : .leading) {
-          Circle().fill(on ? Color.black.opacity(0.85) : BlitzUI.primaryText)
+          Circle().fill(on ? palette.onAccent : .white.opacity(0.92))
             .frame(width: 16, height: 16).padding(3)
         }
         .frame(width: 38, height: 22)
     case .checkbox:
-      RoundedRectangle(cornerRadius: 5)
-        .fill(on ? BlitzUI.mint : hovered ? BlitzUI.hoverFill : BlitzUI.controlFill)
+      RoundedRectangle(cornerRadius: 5, style: .continuous)
+        .fill(
+          on
+            ? palette.accent
+            : usesGlass
+              ? .white.opacity(hovered ? 0.85 : 0.5)
+              : hovered ? palette.hoverFill : palette.controlFill
+        )
         .overlay {
-          RoundedRectangle(cornerRadius: 5)
-            .strokeBorder(on ? .clear : BlitzUI.strongStroke, lineWidth: 1)
+          RoundedRectangle(cornerRadius: 5, style: .continuous)
+            .strokeBorder(
+              on ? .clear : hovered ? palette.secondaryText.opacity(0.5) : palette.strongStroke,
+              lineWidth: 1)
         }
         .overlay {
-          Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
-            .foregroundStyle(.black.opacity(0.85)).opacity(on ? 1 : 0)
+          Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(palette.onAccent).opacity(on ? 1 : 0)
         }
         .frame(width: 18, height: 18)
     }

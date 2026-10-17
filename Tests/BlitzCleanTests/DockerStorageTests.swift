@@ -4,6 +4,32 @@ import Testing
 @testable import BlitzClean
 
 struct DockerStorageTests {
+  @Test func cleanerPrunesOnlyOldBuildCache() throws {
+    let log = FileManager.default.temporaryDirectory.appendingPathComponent(
+      "docker-cleaner-\(UUID())")
+    defer { try? FileManager.default.removeItem(at: log) }
+    let script = try executable("printf '%s\\n' \"$*\" >> '\(log.path)'")
+    defer { try? FileManager.default.removeItem(at: script) }
+    _ = try DockerStorageService(.init(executablePath: script.path, queryTimeout: 3))
+      .cleanBuildCache(minimumAgeDays: 1)
+    #expect(
+      try String(contentsOf: log, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+        == "--host unix:///var/run/docker.sock builder prune --all --force --filter until=24h")
+  }
+
+  @Test func manualCleanerPrunesUnusedBuildCacheWithoutAnAgeFilter() throws {
+    let log = FileManager.default.temporaryDirectory.appendingPathComponent(
+      "docker-manual-cleaner-\(UUID())")
+    defer { try? FileManager.default.removeItem(at: log) }
+    let script = try executable("printf '%s\\n' \"$*\" >> '\(log.path)'")
+    defer { try? FileManager.default.removeItem(at: script) }
+    _ = try DockerStorageService(.init(executablePath: script.path, queryTimeout: 3))
+      .cleanBuildCache(minimumAgeDays: nil)
+    #expect(
+      try String(contentsOf: log, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+        == "--host unix:///var/run/docker.sock builder prune --all --force")
+  }
+
   @Test func rejectsRemoteAndMalformedDockerEndpoints() throws {
     #expect(
       try DockerLocalEndpoint.validate("unix:///var/run/docker.sock")

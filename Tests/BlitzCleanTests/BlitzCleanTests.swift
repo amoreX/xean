@@ -110,8 +110,7 @@ struct QuickCleanTests {
     try Data(repeating: 42, count: 4096).write(to: file)
     try age(file)
     try age(directory)
-    let tree = try CacheCleaner.tree(
-      .init(path: directory.path, deadline: .now.addingTimeInterval(5)))
+    let tree = try CacheCleaner.tree(.init(path: directory.path))
     let candidate = CacheCandidate(path: directory.path, rule: rule(root), tree: tree)
     let handle = try FileHandle(forReadingFrom: file)
     #expect(throws: CacheCleanError.self) { try CacheCleaner.delete(candidate) }
@@ -130,7 +129,7 @@ struct QuickCleanTests {
     try Data(repeating: 42, count: 4096).write(to: file)
     try Data(repeating: 42, count: 4096).write(to: keep)
     try age(file)
-    let tree = try CacheCleaner.tree(.init(path: file.path, deadline: .now.addingTimeInterval(5)))
+    let tree = try CacheCleaner.tree(.init(path: file.path))
     let win = try CacheCleaner.delete(.init(path: file.path, rule: rule(root), tree: tree))
     #expect(win.paths == [file.path])
     #expect(win.before?.isInternal == true)

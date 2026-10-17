@@ -1,6 +1,14 @@
 {
-  "originHash" : "402997f9784deaa267890257d69ad0207a3ed938e2950b8735ab3b9663a8fe9e",
+  "originHash" : "21a695e292889d4ad2d2dc758785012040f95af56923d611c3673509de81ed66",
   "pins" : [
+    {
+      "identity" : "liquidglass",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/metneo/LiquidGlass.git",
+      "state" : {
+        "revision" : "36f81c85922aa3475b7e5bb210e69ffe20a2b377"
+      }
+    },
     {
       "identity" : "sparkle",
       "kind" : "remoteSourceControl",

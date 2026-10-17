@@ -146,18 +146,12 @@ struct MenuBarMetrics: View {
   let showDisk: Bool
   let memoryDisplay: MenuBarMemoryDisplay
 
+  var symbolName: String? = nil
+  var symbolAtEnd = false
+
   var body: some View {
     HStack(spacing: 8) {
-      Group {
-        if risk > .normal {
-          Image(systemName: "exclamationmark.triangle.fill")
-        } else if let mark = AppBrand.mark {
-          Image(nsImage: mark).resizable().renderingMode(.template).frame(width: 18, height: 18)
-        } else {
-          Image(systemName: "bolt.fill")
-        }
-      }.font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(showHealth && risk > .normal ? risk.tone.color : .primary)
+      if !symbolAtEnd { symbol }
       if showCPU {
         MenuBarMetric(
           title: "CPU", value: snapshot.cpuUsage.map(PercentText.make) ?? "—",
@@ -175,7 +169,23 @@ struct MenuBarMetrics: View {
           value: snapshot.diskTotal > 0 ? ByteText.compact(snapshot.diskAvailable) : "—",
           tone: MenuBarTones.disk(snapshot), colored: showHealth)
       }
+      if symbolAtEnd { symbol }
     }.frame(height: 22)
+  }
+
+  private var symbol: some View {
+    Group {
+      if let symbolName {
+        Image(systemName: symbolName).frame(width: 18, height: 18)
+      } else if risk > .normal {
+        Image(systemName: "exclamationmark.triangle.fill")
+      } else if let mark = AppBrand.mark {
+        Image(nsImage: mark).resizable().renderingMode(.template).frame(width: 18, height: 18)
+      } else {
+        Image(systemName: "bolt.fill")
+      }
+    }.font(.system(size: 12, weight: .semibold))
+      .foregroundStyle(showHealth && risk > .normal ? risk.tone.color : .primary)
   }
 
 }

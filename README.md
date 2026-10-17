@@ -1,6 +1,15 @@
 <p align="center"><img src="assets/brand/app-icon.png" width="112" alt="BlitzClean icon"></p>
 <h1 align="center">BlitzClean</h1>
 
+**Cleaner fork:** this workspace launches as a single menu bar cleaner icon. Click it for selectable
+Claude Code, Codex, Superconductor, editor, package, browser, Docker, build, dependency and worktree cleanup.
+Enable a red low-space warning or opt into Auto-clean below a free-space threshold, without notification permissions.
+Expand each category to inspect and delete individual items; set the worktree age for automatic cleanup.
+The interface uses light Liquid Glass from [metneo/LiquidGlass](https://github.com/metneo/LiquidGlass)
+and local [Cuelume](https://cuelume.dev) sound cues, with accessibility fallbacks and fixed 70% playback volume.
+See [the cleaner guide](docs/CLEANER.md) for scope, protections and build instructions. The upstream overview
+below describes the original monitoring app, whose dashboard is no longer launched by this fork.
+
 <p align="center">
   See what is slowing your Mac down, and fix it from the menu bar.<br>
   An open-source resource monitor and careful storage cleaner, built by <a href="https://blitzreels.com">BlitzReels</a>.<br>

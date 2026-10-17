@@ -201,8 +201,7 @@ enum RegrowCleaner {
   }
 
   static func reviewedTree(_ target: RegrowTarget) throws -> CacheTree {
-    let tree = try CacheCleaner.tree(
-      .init(path: target.path, deadline: .now.addingTimeInterval(15)))
+    let tree = try CacheCleaner.tree(.init(path: target.path))
     guard tree.newest < Date.now.addingTimeInterval(-7 * 86_400) else {
       throw CacheCleanError.recent
     }
@@ -249,7 +248,7 @@ enum RegrowCleaner {
     case .folder, .dependencies:
       let reviewed = try reviewedTree(target)
       guard ReviewFile.canonicalPath(target.path) == target.path,
-        try CacheCleaner.tree(.init(path: target.path, deadline: .now.addingTimeInterval(15)))
+        try CacheCleaner.tree(.init(path: target.path))
           == reviewed
       else { throw CacheCleanError.changed }
       try FileManager.default.removeItem(atPath: target.path)

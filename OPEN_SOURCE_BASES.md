@@ -45,6 +45,26 @@ and included in packaged apps.
 - Keep different: BlitzClean reuses its own process snapshot, identity checks, and Projects page instead of
   a second menu bar item and polling loop.
 
+## Cuelume
+
+- Source: <https://github.com/danielwh2/cuelume> · <https://cuelume.dev>
+- License: MIT, copyright 2026 Daniel Belyi. Preserved in
+  [licenses/Cuelume-LICENSE.txt](licenses/Cuelume-LICENSE.txt) and packaged apps.
+- Eight native WAV cues are generated with the project's own offline renderer and default sound recipes
+  at commit `2a1ba4fc1b67e8371c9f37e37a51e61353166335` (package version 0.2.8).
+- `scripts/render-cleaner-sounds.mjs` reproduces the assets. Playback is native AVAudioPlayer; the app
+  has no JavaScript or network dependency for sounds.
+
+## LiquidGlass
+
+- Source: <https://github.com/metneo/LiquidGlass>
+- License: MIT. The original notice is preserved in
+  [licenses/LiquidGlass-LICENSE.txt](licenses/LiquidGlass-LICENSE.txt) and packaged apps.
+- SwiftPM dependency pinned to `36f81c85922aa3475b7e5bb210e69ffe20a2b377`.
+- Used for the cleaner's panels, buttons, selection controls and inputs, with native macOS 26 glass and
+  the package's material renderer on older supported systems. The window backdrop uses AppKit material.
+- Package reference: [LiquidGlass skill](https://github.com/metneo/LiquidGlass/blob/36f81c85922aa3475b7e5bb210e69ffe20a2b377/skills/liquidglass/SKILL.md).
+
 ## License policy
 
 - Preserve copyright and MIT license notices for copied or substantially adapted source.
