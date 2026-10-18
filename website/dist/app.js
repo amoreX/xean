@@ -1,6 +1,6 @@
-import { cue } from './sounds.js?v=20261019-load-only-audio';
+import { cue } from './sounds.js?v=20261019-footer-hover-audio';
 import { initDemo } from './demo.js?v=20261019-popover-cleanup';
-import { initFooter } from './footer.js?v=20261019-load-only-audio';
+import { initFooter } from './footer.js?v=20261019-footer-hover-audio';
 
 const installPrompt = [
   'Help me install and launch xean, the native macOS menu bar cleaner, from https://github.com/amoreX/xean.',

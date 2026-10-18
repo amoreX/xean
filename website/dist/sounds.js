@@ -19,19 +19,22 @@ async function unlockAudio() {
   } catch { return false; }
 }
 
-export async function cue(name, { volume = 0.7, automatic = false, signal } = {}) {
+export async function cue(name, { volume = 0.7, automatic = false, hover = false, playbackRate = 1, signal } = {}) {
   if (document.hidden || signal?.aborted) return false;
   const now = performance.now();
   if (automatic && now - lastPlay < 300) return false;
+  if (hover && now - lastPlay < 120) return false;
   if (['tap', 'select', 'toggle'].includes(name) && now - lastPlay < 80) return false;
-  if (!automatic) lastPlay = now;
-  const request = ++latest;
   try {
+    context ??= new (window.AudioContext || window.webkitAudioContext)();
+    // Hover cannot unlock audio. Skip it instead of queueing sounds for a later click.
+    if (hover && context.state !== 'running') return false;
+    if (!automatic) lastPlay = now;
+    const request = ++latest;
     if (automatic) {
       // Never leave an intro cue waiting for a later, unrelated user gesture.
       if (!await unlockAudio()) return false;
-    } else {
-      context ??= new (window.AudioContext || window.webkitAudioContext)();
+    } else if (!hover) {
       await context.resume();
     }
     if (!buffers.has(name)) {
@@ -39,11 +42,12 @@ export async function cue(name, { volume = 0.7, automatic = false, signal } = {}
       if (!bytes) return false;
       buffers.set(name, await context.decodeAudioData(bytes.slice(0)));
     }
-    if (request !== latest || document.hidden || signal?.aborted || (automatic && performance.now() - now > 250)) return false;
+    if (request !== latest || document.hidden || signal?.aborted || ((automatic || hover) && performance.now() - now > 250)) return false;
     player?.stop();
     const source = context.createBufferSource();
     player = source;
     player.buffer = buffers.get(name);
+    player.playbackRate.value = playbackRate;
     const gain = context.createGain();
     gain.gain.value = volume;
     player.connect(gain).connect(context.destination);

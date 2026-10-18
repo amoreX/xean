@@ -17,6 +17,19 @@ export function initFooter(cue) {
   let previewStartedAt = null;
   let previewSoundAttempted = false;
   let previewAudio;
+  let hoveredLetter = -1;
+
+  function soundForPointer(event, hover = true) {
+    if (!event.isTrusted || !ready || document.hidden || (hover && event.pointerType === 'touch')) return;
+    const index = letters.findIndex(({ slot }) => {
+      const bounds = slot.getBoundingClientRect();
+      return event.clientX >= bounds.left && event.clientX <= bounds.right &&
+        event.clientY >= bounds.top && event.clientY <= bounds.bottom;
+    });
+    if (index < 0 || (hover && index === hoveredLetter)) return;
+    hoveredLetter = index;
+    cue('tap', { hover, volume: .6, playbackRate: [0.9, 1, 1.12, 1.26][index] });
+  }
 
   function render(time) {
     if (previewStartedAt !== null) {
@@ -86,6 +99,7 @@ export function initFooter(cue) {
     previewAudio?.abort();
     previewStartedAt = null;
     pressed = false;
+    hoveredLetter = -1;
     letters.forEach(letter => { letter.target = rest(); });
     if (immediate) {
       cancelAnimationFrame(frame);
@@ -121,9 +135,11 @@ export function initFooter(cue) {
     else release(true);
   }, { threshold: .5 }).observe(wordmark);
   wordmark.addEventListener('pointerenter', event => {
+    soundForPointer(event);
     if (event.pointerType !== 'touch') follow(event);
   });
-  wordmark.addEventListener('pointermove', follow);
+  wordmark.addEventListener('pointermove', event => { soundForPointer(event); follow(event); });
+  wordmark.addEventListener('click', event => soundForPointer(event, false));
   wordmark.addEventListener('pointerdown', event => { pressed = true; follow(event); });
   wordmark.addEventListener('pointerup', event => {
     pressed = false;
