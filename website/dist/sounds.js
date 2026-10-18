@@ -9,7 +9,7 @@ let player;
 let latest = 0;
 let lastPlay = -Infinity;
 
-export async function unlockAudio() {
+async function unlockAudio() {
   try {
     context ??= new (window.AudioContext || window.webkitAudioContext)();
     return await Promise.race([

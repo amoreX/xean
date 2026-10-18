@@ -1,6 +1,6 @@
 // Pointer-driven variation of the existing OriginKit-inspired weight interaction:
 // https://www.originkit.dev/components/weight-hover
-export function initFooter(cue, unlockAudio) {
+export function initFooter(cue) {
   const wordmark = document.querySelector('.brand-wordmark');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const rest = () => ({ weight: 800, x: 0, y: 0, tilt: 0 });
@@ -15,34 +15,8 @@ export function initFooter(cue, unlockAudio) {
   let visible = false;
   let previewPending = true;
   let previewStartedAt = null;
-  let previewSoundPlayed = false;
+  let previewSoundAttempted = false;
   let previewAudio;
-  let replayTimer;
-
-  function rememberSound(played) {
-    if (!played) return;
-    previewSoundPlayed = true;
-    clearTimeout(replayTimer);
-    document.removeEventListener('click', retryWithSound);
-    document.removeEventListener('keydown', retryWithSound);
-  }
-
-  async function retryWithSound(event) {
-    if (!event.isTrusted || previewSoundPlayed || reducedMotion.matches || document.hidden) return;
-    if (!await unlockAudio()) return;
-    clearTimeout(replayTimer);
-    // Let the clicked control's own sound finish before replaying the intro.
-    replayTimer = setTimeout(() => {
-      if (previewSoundPlayed || reducedMotion.matches || document.hidden) return;
-      if (visible && wordmark.matches(':hover')) {
-        cue('ready', { automatic: true }).then(rememberSound);
-      } else {
-        release(true);
-        previewPending = true;
-        preview();
-      }
-    }, 350);
-  }
 
   function render(time) {
     if (previewStartedAt !== null) {
@@ -128,16 +102,15 @@ export function initFooter(cue, unlockAudio) {
   function preview() {
     if (!entranceReady || !visible || !previewPending || previewStartedAt !== null || reducedMotion.matches || document.hidden) return;
     previewStartedAt = performance.now();
-    if (!previewSoundPlayed) {
+    if (!previewSoundAttempted) {
+      previewSoundAttempted = true;
       previewAudio = new AbortController();
-      cue('ready', { automatic: true, signal: previewAudio.signal }).then(rememberSound);
+      cue('ready', { automatic: true, signal: previewAudio.signal });
     }
     animate();
   }
 
   document.fonts.ready.then(() => { ready = true; });
-  document.addEventListener('click', retryWithSound);
-  document.addEventListener('keydown', retryWithSound);
   Promise.allSettled([document.fonts.ready, ...wordmark.getAnimations().map(animation => animation.finished)]).then(() => {
     entranceReady = true;
     preview();
