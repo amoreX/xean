@@ -29,4 +29,6 @@ The browser preview starts with a simulated macOS desktop, Finder window, dock, 
 
 No analytics, remote fonts, or browser storage are used. The preview is implemented in HTML/CSS; the installed app uses native SwiftUI and AppKit components.
 
+The footer wordmark uses a lightweight, independent adaptation of [OriginKit's Weight Hover](https://www.originkit.dev/components/weight-hover): a staggered ripple from bold to lighter lettering and back. It plays once on entering view and on hover, touch, or keyboard focus within the footer. Fixed letter slots prevent layout shifts, the creator credit stays still, and Reduce Motion disables the effect. `footer.js` uses the Web Animations API and a locally bundled Manrope variable font from [Google Fonts](https://github.com/google/fonts/tree/main/ofl/manrope), with its SIL Open Font License alongside it. No OriginKit source code or React runtime is bundled.
+
 The website source lives in the [xean fork](https://github.com/amoreX/xean) alongside the native app. Deploy `website/dist/` to any static host with no build command. Optional local hosting metadata is ignored by Git; the site has no dependency on ChatGPT Sites.

@@ -1,5 +1,6 @@
 import { cue, setMuted } from './sounds.js';
 import { initDemo } from './demo.js?v=20261019-mobile-4';
+import { initFooter } from './footer.js?v=20261019-footer-2';
 
 const installPrompt = [
   'Help me install and launch xean, the native macOS menu bar cleaner, from https://github.com/amoreX/xean.',
@@ -64,3 +65,4 @@ muteButton.addEventListener('click', () => {
   if (!muted) cue('toggle');
 });
 initDemo(cue);
+initFooter();
