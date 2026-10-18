@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum AppBrand {
-  static let name = "BlitzClean"
+  static let name = "xean"
   static var version: String {
     Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
       ?? "Development"

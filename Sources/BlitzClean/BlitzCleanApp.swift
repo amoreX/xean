@@ -53,14 +53,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     NSApp.setActivationPolicy(.accessory)
     let menu = NSMenu()
     let applicationItem = NSMenuItem()
-    let applicationMenu = NSMenu(title: "BlitzClean")
+    let applicationMenu = NSMenu(title: AppBrand.name)
     let open = NSMenuItem(
       title: "Open cleaner…", action: #selector(showCleaner), keyEquivalent: ",")
     open.target = self
     applicationMenu.addItem(open)
     applicationMenu.addItem(.separator())
     let quit = NSMenuItem(
-      title: "Quit BlitzClean", action: #selector(requestQuit), keyEquivalent: "q")
+      title: "Quit \(AppBrand.name)", action: #selector(requestQuit), keyEquivalent: "q")
     quit.target = self
     applicationMenu.addItem(quit)
     applicationItem.submenu = applicationMenu
@@ -82,9 +82,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     item.button?.image = NSImage(
-      systemSymbolName: "eraser.fill", accessibilityDescription: "Open BlitzClean cleaner")
+      systemSymbolName: "eraser.fill", accessibilityDescription: "Open \(AppBrand.name) cleaner")
     item.button?.image?.isTemplate = true
-    item.button?.toolTip = "BlitzClean · Clean up"
+    item.button?.toolTip = "\(AppBrand.name) · Clean up"
     item.button?.target = self
     item.button?.action = #selector(toggleCleaner)
     statusItem = item
@@ -164,8 +164,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       image: image, animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     button.toolTip =
       enabled
-      ? "BlitzClean · " + display.title(for: snapshot) : "BlitzClean · Clean up"
-    if warning { button.toolTip = "Low disk space · " + (button.toolTip ?? "BlitzClean") }
+      ? "\(AppBrand.name) · " + display.title(for: snapshot) : "\(AppBrand.name) · Clean up"
+    if warning { button.toolTip = "Low disk space · " + (button.toolTip ?? AppBrand.name) }
     button.setAccessibilityLabel(button.toolTip)
     warningBadge.isHidden = !warning
   }

@@ -122,6 +122,7 @@ clears their snapshot. The cleaner continues its independent disk-space checks.
 
 | Identifier | Current value / contents |
 | --- | --- |
+| macOS display name, bundle name, and permission copy | `xean` |
 | SwiftPM package, target, and executable | `BlitzClean` |
 | Packaged app | `dist/BlitzClean.app` |
 | Bundle / preference domain | `com.blitzreels.BlitzClean` |
