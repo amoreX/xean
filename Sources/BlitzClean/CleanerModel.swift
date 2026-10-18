@@ -26,6 +26,9 @@ struct CleanerCleanup: Identifiable {
 
 @MainActor
 final class CleanerModel: ObservableObject {
+  @Published var darkTheme: Bool {
+    didSet { defaults.set(darkTheme, forKey: "cleaner.darkTheme") }
+  }
   @Published var preferences: CleanerPreferences {
     didSet {
       if preferences != preferences.normalized { preferences = preferences.normalized }
@@ -79,6 +82,7 @@ final class CleanerModel: ObservableObject {
     self.driver = driver
     self.history = history
     self.now = now
+    darkTheme = defaults.bool(forKey: "cleaner.darkTheme")
     preferences = CleanerPreferences.load(defaults)
     if let data = defaults.data(forKey: "cleaner.lastOutcome") {
       outcome = try? JSONDecoder().decode(CleanerOutcome.self, from: data)

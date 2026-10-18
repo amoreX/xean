@@ -20,8 +20,9 @@ struct CleanerView: View {
           header.padding(.horizontal, 18).padding(.top, 14).padding(.bottom, 10)
           CleanerCleanupView(
             model: model, cleanup: cleanup, onClose: onClose,
-            presentedRemovals: $presentedRemovals)
-            .id(cleanup.id)
+            presentedRemovals: $presentedRemovals
+          )
+          .id(cleanup.id)
         }
       } else {
         cleanerContent
@@ -68,12 +69,26 @@ struct CleanerView: View {
         Text(model.available.map { ByteText.full($0) + " free" } ?? "Checking space…")
           .monospacedDigit().lineLimit(1)
       }.font(BlitzType.body).foregroundStyle(.secondary)
+      Button {
+        model.darkTheme.toggle()
+        model.sounds.play(.toggle)
+      } label: {
+        Image(systemName: model.darkTheme ? "sun.max" : "moon")
+          .font(.system(size: 14, weight: .medium))
+          .frame(width: 22, height: 24)
+      }.buttonStyle(.borderless)
+        .accessibilityLabel(themeAction)
+        .help(themeAction)
       Button(action: onQuitRequest) {
         Image(systemName: "power").font(.system(size: 14, weight: .medium))
       }.buttonStyle(.borderless)
         .accessibilityLabel("Quit xean")
         .help("Quit xean")
     }
+  }
+
+  private var themeAction: String {
+    model.darkTheme ? "Switch to light theme" : "Switch to dark theme"
   }
 
   private var quitConfirmation: some View {

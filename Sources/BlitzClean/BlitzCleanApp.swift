@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private let launchAtLogin = LaunchAtLoginController()
   private let menuBarStats = CleanerMenuBarStats()
   private var statsSubscription: AnyCancellable?
+  private var themeSubscription: AnyCancellable?
   private var menuBarAnimator: CleanerMenuBarAnimator?
   private let warningBadge = CleanerWarningBadge()
   private var localClickMonitor: Any?
@@ -76,6 +77,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     NSApp.windowsMenu = windowMenu
     let model = CleanerModel()
     cleaner = model
+    themeSubscription = model.$darkTheme.removeDuplicates().sink { [weak self] dark in
+      self?.cleanerPanel?.darkTheme = dark
+    }
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     item.button?.image = NSImage(
       systemSymbolName: "eraser.fill", accessibilityDescription: "Open BlitzClean cleaner")
@@ -224,6 +228,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     guard let cleaner, let button = statusItem?.button, let cleanerAnchor else { return }
     if cleanerPanel == nil {
       let panel = CleanerPopover()
+      panel.darkTheme = cleaner.darkTheme
       let controller = NSHostingController(
         rootView: CleanerView(
           model: cleaner, launchAtLogin: launchAtLogin, menuBarStats: menuBarStats))

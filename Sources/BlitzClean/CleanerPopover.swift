@@ -9,6 +9,11 @@ final class CleanerPopover: NSPopover {
   static let animationDuration: TimeInterval = 0.18
 
   var didDismiss: (() -> Void)?
+  var darkTheme = false {
+    didSet {
+      if darkTheme != oldValue { configureAppearance() }
+    }
+  }
   private(set) var isPresented = false
   private var generation = 0
   private var presentationAnchor: CleanerPresentationAnchor?
@@ -25,10 +30,7 @@ final class CleanerPopover: NSPopover {
       let anchor = CleanerPresentationAnchor(screenRect: screenRect)
       presentationAnchor = anchor
       anchor.orderFront(nil)
-      appearance =
-        NSAppearance(
-          named: NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
-            ? .accessibilityHighContrastAqua : .aqua) ?? NSAppearance(named: .aqua)
+      configureAppearance()
       show(
         relativeTo: anchor.positioningView.bounds, of: anchor.positioningView,
         preferredEdge: .minY)
@@ -36,13 +38,13 @@ final class CleanerPopover: NSPopover {
     }
     window?.makeKey()
     window?.makeFirstResponder(nil)
-    configureGlassBackdrop()
+    configureAppearance()
     if accessibilityObserver == nil {
       accessibilityObserver = NSWorkspace.shared.notificationCenter.addObserver(
         forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
         object: nil, queue: .main
       ) { [weak self] _ in
-        MainActor.assumeIsolated { self?.configureGlassBackdrop() }
+        MainActor.assumeIsolated { self?.configureAppearance() }
       }
     }
     animate { [weak self] in self?.window?.animator().alphaValue = 1 }
@@ -77,14 +79,21 @@ final class CleanerPopover: NSPopover {
     guard contentSize != size else { return }
     let previousFrame = window?.frame
     contentSize = size
-    configureGlassBackdrop()
+    configureAppearance()
     guard animated, isPresented, let window, let previousFrame else { return }
     let targetFrame = window.frame
     window.setFrame(previousFrame, display: false)
     animate { window.animator().setFrame(targetFrame, display: true) }
   }
 
-  private func configureGlassBackdrop() {
+  private func configureAppearance() {
+    let standard: NSAppearance.Name = darkTheme ? .darkAqua : .aqua
+    let highContrast: NSAppearance.Name =
+      darkTheme ? .accessibilityHighContrastDarkAqua : .accessibilityHighContrastAqua
+    appearance =
+      NSAppearance(
+        named: NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+          ? highContrast : standard) ?? NSAppearance(named: standard)
     guard #available(macOS 26.0, *), let content = contentViewController?.view,
       let frame = window?.contentView?.superview
     else { return }
@@ -98,7 +107,8 @@ final class CleanerPopover: NSPopover {
       guard view !== content else { return }
       if let glass = view as? NSGlassEffectView {
         glass.style = .regular
-        glass.tintColor = tinted ? .white.withAlphaComponent(0.12) : nil
+        glass.tintColor =
+          tinted ? (darkTheme ? NSColor.black : .white).withAlphaComponent(0.12) : nil
         return
       }
       view.subviews.forEach(configure)

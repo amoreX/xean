@@ -34,7 +34,7 @@ All source paths below are relative to [`Sources/BlitzClean`](../Sources/BlitzCl
 | `Entry.swift` | Entry point and inherited preference migration |
 | `BlitzCleanApp.swift` / `AppDelegate` | Accessory app lifetime, status item, native menu, outside-click handling, and keyboard routing |
 | `CleanerPopover.swift` | AppKit-owned material, border, arrow, shadow, placement, 180 ms fade, and compact Quit height |
-| `CleanerView.swift` | Header, auto-clean/low-space inputs, category selection, stats settings, login switch, footer, and confirmations |
+| `CleanerView.swift` | Header and theme toggle, auto-clean/low-space inputs, category selection, stats settings, login switch, footer, and confirmations |
 | `CleanerControls.swift` | Native `.glass` / `.glassProminent` on macOS 26+, bordered fallbacks, and aligned native switches |
 | `CleanerCategoryRow.swift` | Category inventory and direct Delete; `CleanerDisclosureReveal` clips animated height without animating text |
 | `CleanerCleanupView.swift` | Scanning, deletion queue, successful, empty, and partial outcomes |
@@ -44,8 +44,11 @@ All source paths below are relative to [`Sources/BlitzClean`](../Sources/BlitzCl
 | `LaunchAtLoginController.swift` | `SMAppService.mainApp` registration and error reporting |
 
 Popover content is 420 × 580 points, shortened for smaller screens. Quit uses 64 points of content height.
-On macOS 26+, `CleanerPopover` styles AppKit's backdrop `NSGlassEffectView` as regular frosted glass with a light
-neutral tint. It skips the hosted content subtree, preserves full window/content opacity, and restores
+The header theme button persists `CleanerModel.darkTheme` separately from cleanup preferences. AppDelegate
+observes this value and updates the existing popover's Aqua/Dark Aqua appearance, including native controls,
+without replacing the hosted view or changing cleanup state. The theme defaults to light.
+On macOS 26+, `CleanerPopover` styles AppKit's backdrop `NSGlassEffectView` as regular frosted glass with a
+neutral tint matching the theme. It skips the hosted content subtree, preserves full window/content opacity, and restores
 the standard material for Reduce Transparency or increased contrast. It retains native material on
 older macOS versions or if AppKit does not expose a glass backdrop.
 `CleanerStatusAnchor` locates the trailing eraser. On opening, `CleanerPopover` captures that screen
@@ -125,6 +128,7 @@ clears their snapshot. The cleaner continues its independent disk-space checks.
 | `cleaner.lastCheck` | Background scheduling timestamp |
 | `cleaner.lastOutcome` | Most recent cleanup count, measured bytes, kept count, and observed free-space gain |
 | `cleaner.showMenuBarStats` and shared menu bar keys | Enabled metrics and memory format |
+| `cleaner.darkTheme` | Native popover theme; false (light) by default, independent of cleanup preferences |
 | `cleanup-history.json` | Up to 1,000 removal records; atomic writes and owner-only permissions |
 
 These names preserve compatibility with inherited data. xean and an installed BlitzClean build can share

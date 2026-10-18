@@ -3,12 +3,12 @@
 xean is a single-panel menu bar cleaner. These rules describe the active product; inherited dashboard
 components are retained for compatibility, not a reference for new cleaner UI.
 
-Use AppKit's native `NSPopover` with the light Aqua appearance. On macOS 26+, set its native glass
-backdrop to the regular frosted style with a 12% white tint for a neutral, translucent surface that
+Use AppKit's native `NSPopover`, light by default with a persistent light/dark choice. On macOS 26+, set its native glass
+backdrop to the regular frosted style with a 12% white or black tint matching the theme for a neutral, translucent surface that
 diffuses background details. Keep content at
 full opacity and leave the glass inside hosted controls untouched. AppKit owns the material, border,
 pointer, shadow and screen-edge placement; do not layer a custom material, outline or shape over it.
-Keep the panel light even when macOS is dark. Reduce Transparency and increased contrast restore
+The choice is independent of macOS appearance. Reduce Transparency and increased contrast restore
 the standard native material, including when those settings change while open. Earlier macOS versions
 retain their standard native popover. Content is 420 × 580 points, shortened
 on smaller screens. Use native SwiftUI switches, checkboxes, text fields and segmented
@@ -16,7 +16,10 @@ pickers. Primary and secondary actions use native glass button styles on macOS 2
 standard bordered styles on earlier systems. Do not add custom tints, button outlines or shadow clips.
 Keep sections unboxed, with compact spacing and no horizontal dividers.
 
-The header is one line: lowercase “xean”, available space, and an accessible power icon.
+The header is one line: lowercase “xean”, available space, a sun/moon theme button, and an accessible power icon.
+The theme button switches directly between light and dark, updates the entire native popover in place,
+and remembers the choice across launches. Its help and accessible label describe the destination theme.
+This control belongs only to the native app; do not add it to the website preview.
 Power and ⌘Q replace the contents with a compact “Quit xean?”, Cancel and Quit row. This is the same
 popover, resized to 64 points of content, not a modal. Cancel or Escape restores the cleaner. Dismissing
 and reopening starts in the normal cleaner. Clicking the icon again, clicking outside, Escape and ⌘W

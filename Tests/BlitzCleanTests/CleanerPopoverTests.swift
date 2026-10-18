@@ -36,12 +36,22 @@ struct CleanerPopoverTests {
         if let glass = view as? NSGlassEffectView { return [glass] }
         return view.subviews.flatMap { backdrops(in: $0) }
       }
-      let glass = try #require(backdrops(in: frame).first)
       let tinted =
         !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
         && !NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
-      #expect(glass.style == .regular)
-      #expect(glass.tintColor == (tinted ? NSColor.white.withAlphaComponent(0.12) : nil))
+      let window = try #require(popover.window)
+      let windowFrame = window.frame
+      for dark in [true, false] {
+        popover.darkTheme = dark
+        let glass = try #require(backdrops(in: frame).first)
+        let tint = (dark ? NSColor.black : .white).withAlphaComponent(0.12)
+        #expect(glass.style == .regular)
+        #expect(glass.tintColor == (tinted ? tint : nil))
+        #expect(
+          popover.appearance?.bestMatch(from: [.aqua, .darkAqua]) == (dark ? .darkAqua : .aqua))
+        #expect(popover.window === window)
+        #expect(window.frame == windowFrame)
+      }
       #expect(controlGlass.style == .regular)
       #expect(controlGlass.tintColor == .systemBlue)
       #expect(controlGlass.alphaValue == 1)
