@@ -1,50 +1,91 @@
-// Independent adaptation of OriginKit's Weight Hover interaction:
+// Pointer-driven variation of the existing OriginKit-inspired weight interaction:
 // https://www.originkit.dev/components/weight-hover
 export function initFooter() {
-  const footer = document.querySelector('.brand-footer');
-  const wordmark = footer.querySelector('.brand-wordmark');
-  const letters = [...wordmark.querySelectorAll('.brand-letter > span')];
+  const wordmark = document.querySelector('.brand-wordmark');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  let animations = [];
+  const rest = () => ({ weight: 800, x: 0, y: 0, tilt: 0 });
+  const letters = [...wordmark.querySelectorAll('.brand-letter')].map(slot => ({
+    slot, glyph: slot.querySelector('span'), current: rest(), target: rest()
+  }));
+  let frame = 0;
+  let previousTime = 0;
+  let pressed = false;
   let ready = false;
 
-  function stop() {
-    animations.forEach(animation => animation.cancel());
-    animations = [];
-  }
-
-  function play() {
-    if (!ready || reducedMotion.matches || document.hidden || animations.some(animation => animation.playState === 'running')) return;
-    stop();
-    animations = letters.map((letter, index) => letter.animate([
-      { fontWeight: 800 },
-      { fontWeight: 450, offset: .42 },
-      { fontWeight: 800 }
-    ], {
-      duration: 750,
-      delay: index * 70,
-      easing: 'cubic-bezier(.4,0,.2,1)'
-    }));
-  }
-
-  const observer = new IntersectionObserver(entries => {
-    if (entries.some(entry => entry.intersectionRatio >= .65)) {
-      play();
-      observer.disconnect();
+  function render(time) {
+    const delta = previousTime ? Math.min(time - previousTime, 32) : 16;
+    previousTime = time;
+    const blend = 1 - Math.exp(-delta / 45);
+    let moving = false;
+    for (const letter of letters) {
+      for (const key of Object.keys(letter.current)) {
+        const difference = letter.target[key] - letter.current[key];
+        if (Math.abs(difference) > (key === 'weight' ? .2 : .01)) {
+          letter.current[key] += difference * blend;
+          moving = true;
+        } else letter.current[key] = letter.target[key];
+      }
+      const { weight, x, y, tilt } = letter.current;
+      letter.glyph.style.fontWeight = weight.toFixed(1);
+      letter.glyph.style.transform = `translate(${x.toFixed(2)}px,${y.toFixed(2)}px) rotate(${tilt.toFixed(2)}deg)`;
     }
-  }, { threshold: .65 });
+    frame = moving ? requestAnimationFrame(render) : 0;
+    if (!moving) previousTime = 0;
+  }
 
-  document.fonts.ready.then(() => {
-    ready = true;
-    observer.observe(wordmark);
-  });
+  function animate() {
+    if (!frame) frame = requestAnimationFrame(render);
+  }
+
+  function follow(event) {
+    if (!ready || reducedMotion.matches || document.hidden) return;
+    const bounds = wordmark.getBoundingClientRect();
+    const radius = bounds.width * .55;
+    for (const letter of letters) {
+      // Measure the fixed slot, so a moving glyph never chases its own position.
+      const slot = letter.slot.getBoundingClientRect();
+      const dx = event.clientX - (slot.left + slot.width / 2);
+      const dy = event.clientY - (slot.top + slot.height * .6);
+      const proximity = Math.max(0, 1 - Math.hypot(dx, dy * .65) / radius);
+      const influence = proximity * proximity * (3 - 2 * proximity);
+      letter.target = {
+        weight: 800 - (pressed ? 430 : 350) * influence,
+        x: Math.max(-8, Math.min(8, dx * .09)) * influence,
+        y: -(pressed ? 18 : 12) * influence,
+        tilt: Math.max(-4, Math.min(4, dx * .06)) * influence
+      };
+    }
+    animate();
+  }
+
+  function release(immediate = false) {
+    pressed = false;
+    letters.forEach(letter => { letter.target = rest(); });
+    if (immediate) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      previousTime = 0;
+      letters.forEach(letter => {
+        letter.current = rest();
+        letter.glyph.style.removeProperty('font-weight');
+        letter.glyph.style.removeProperty('transform');
+      });
+    } else animate();
+  }
+
+  document.fonts.ready.then(() => { ready = true; });
   wordmark.addEventListener('pointerenter', event => {
-    if (event.pointerType === 'mouse') play();
+    if (event.pointerType !== 'touch') follow(event);
   });
-  wordmark.addEventListener('pointerdown', event => {
-    if (event.pointerType !== 'mouse') play();
+  wordmark.addEventListener('pointermove', follow);
+  wordmark.addEventListener('pointerdown', event => { pressed = true; follow(event); });
+  wordmark.addEventListener('pointerup', event => {
+    pressed = false;
+    if (event.pointerType === 'touch') release();
+    else follow(event);
   });
-  footer.addEventListener('focusin', play);
-  reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) stop(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
+  wordmark.addEventListener('pointerleave', () => release());
+  wordmark.addEventListener('pointercancel', () => release());
+  reducedMotion.addEventListener('change', () => release(true));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) release(true); });
 }

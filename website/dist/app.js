@@ -1,6 +1,6 @@
 import { cue, setMuted } from './sounds.js';
 import { initDemo } from './demo.js?v=20261019-cleanup-cursor';
-import { initFooter } from './footer.js?v=20261019-footer-2';
+import { initFooter } from './footer.js?v=20261019-footer-pointer';
 
 const installPrompt = [
   'Help me install and launch xean, the native macOS menu bar cleaner, from https://github.com/amoreX/xean.',

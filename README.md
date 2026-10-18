@@ -1,6 +1,7 @@
 <h1 align="center">xean</h1>
 <p align="center">A small macOS menu bar cleaner for developer caches, build files, and old worktrees.</p>
 <p align="center">Native SwiftUI + AppKit · Liquid Glass on macOS 26+ · Free and open source</p>
+<p align="center">A fork of <a href="https://github.com/blitzreels/blitzclean">BlitzClean by BlitzReels</a>, focused on developer cleanup.</p>
 <p align="center">
   <a href="#get-started">Get started</a> ·
   <a href="docs/CLEANER.md">User guide</a> ·
@@ -44,9 +45,9 @@ After changing the source, **quit xean**, then rebuild:
 Run `./start.sh --help` for launcher usage. It works from any directory and refuses to rebuild over a
 running app. The first build downloads SwiftPM dependencies; subsequent launches use the local bundle.
 
-The executable, bundle, preference domain, and source target still use the inherited **BlitzClean** name.
-You may see that name in Finder or macOS settings. See [compatibility names](docs/ARCHITECTURE.md#compatibility-names)
-for the exact paths.
+The executable, app filename, preference domain, and source target retain **BlitzClean** compatibility
+names. The macOS display name and permission copy use **xean**. See
+[compatibility names](docs/ARCHITECTURE.md#compatibility-names) for the exact paths.
 
 ## What it cleans
 
@@ -93,7 +94,7 @@ editable beside their switches. [The user guide](docs/CLEANER.md) covers timing,
 
 AppKit owns the popover's translucent background, border, pointer, and shadow. SwiftUI supplies native
 switches, checkboxes, numeric fields, and segmented controls. On macOS 26+, actions use native Liquid Glass
-button styles. The panel uses a light, translucent white appearance, including when macOS is dark.
+button styles. The panel defaults to light, with a persistent light/dark theme button beside free space.
 
 The header and Clean button stay fixed while content scrolls through a soft edge blur. Custom transitions
 take 180 ms: disclosures and removed entries animate their height without moving or revealing individual
@@ -168,6 +169,6 @@ while previewing; press Ctrl+C to stop. No package install or build step is need
 
 ## Credits and license
 
-xean is [MIT licensed](LICENSE), built on [BlitzClean](https://github.com/blitzreels/blitzclean).
+xean is an [MIT-licensed](LICENSE) fork of [BlitzClean](https://github.com/blitzreels/blitzclean) by BlitzReels.
 Original copyright and third-party notices are preserved. [Open-source credits](OPEN_SOURCE_BASES.md)
 explain the inherited code, bundled dependencies, and Cuelume sound assets.
