@@ -3,6 +3,7 @@
 <p align="center">Native SwiftUI + AppKit · Liquid Glass on macOS 26+ · Free and open source</p>
 <p align="center">A fork of <a href="https://github.com/blitzreels/blitzclean">BlitzClean by BlitzReels</a>, focused on developer cleanup.</p>
 <p align="center">
+  <a href="https://xean-ivory.vercel.app">Website</a> ·
   <a href="#get-started">Get started</a> ·
   <a href="docs/CLEANER.md">User guide</a> ·
   <a href="docs/ARCHITECTURE.md">Components</a> ·

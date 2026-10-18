@@ -12,6 +12,18 @@ From the repository root:
 
 Open `http://127.0.0.1:4173`. Python 3 is the only requirement; no account, Node.js, or package installation is needed. Keep the terminal running and press Ctrl+C to stop it. Use `./start-site.sh 4174` to choose another port. The launcher works from any working directory.
 
+## Deploy to Vercel
+
+Live site: [xean-ivory.vercel.app](https://xean-ivory.vercel.app).
+
+From the repository root, after signing in with `npx vercel login`:
+
+```sh
+npx vercel --cwd website --project xean --prod
+```
+
+The Vercel project root is `website`. Its configuration serves `dist/` directly with no installation or build command. Local project links in `.vercel/` stay out of Git, and `.vercelignore` excludes the old local Sites metadata from uploads. The production URL is public; browser audio autoplay permissions still apply separately for each visitor.
+
 ## Contents
 
 - `dist/index.html`: three-line hero, install chooser, simulated macOS desktop, interactive product preview, and a footer wordmark with Nihal’s X link.
