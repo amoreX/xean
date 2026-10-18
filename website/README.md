@@ -14,7 +14,7 @@ Open `http://127.0.0.1:4173`. Python 3 is the only requirement; no account, Node
 
 ## Deploy to Vercel
 
-Live site: [xean-ivory.vercel.app](https://xean-ivory.vercel.app).
+Live site: [x3an.vercel.app](https://x3an.vercel.app).
 
 The Vercel project `xean` is connected to [amoreX/xean](https://github.com/amoreX/xean). Pushes to `codex/blitzclean` automatically deploy to production. Other branches create preview deployments.
 
