@@ -453,6 +453,25 @@ export function initDemo(cue) {
     await wait(motion.zoom + 700);
     if (!valid()) return;
 
+    if (!await demonstrateClick($('#auto-clean'), valid, () => {
+      $('#automatic-row').hidden = true;
+      $('#auto-confirm').hidden = false;
+    })) return;
+    await wait(500);
+    if (!valid()) return;
+    if (!await demonstrateClick($('[data-action="confirm-auto"]'), valid, () => {
+      $('#auto-clean').checked = true;
+      $('#automatic-row').hidden = false;
+      $('#auto-confirm').hidden = true;
+      syncSelection();
+    })) return;
+    if (!await demonstrateClick($('#notify-low'), valid, () => {
+      $('#notify-low').checked = true;
+      updateWarning();
+    })) return;
+    await wait(650);
+    if (!valid()) return;
+
     for (const category of categories.filter(category => ['claude', 'worktrees'].includes(category.id))) {
       const row = $('#category-' + category.id);
       if (!await scrollToElement(row) || !valid()) return;
@@ -480,21 +499,7 @@ export function initDemo(cue) {
     if (!await scrollToElement($('.app-settings')) || !valid()) return;
     await wait(500);
     if (!valid()) return;
-    for (const enabled of [false, true]) {
-      if (!await demonstrateClick($('#show-stats'), valid, () => setStatsEnabled(enabled))) return;
-      await wait(450);
-      if (!valid()) return;
-    }
-    for (const metric of ['cpu', 'memory', 'disk']) {
-      for (const enabled of [false, true]) {
-        if (!await demonstrateClick($('#show-' + metric), valid, () => {
-          $('#show-' + metric).checked = enabled;
-          renderMetrics();
-        })) return;
-        await wait(300);
-        if (!valid()) return;
-      }
-    }
+    if (!await demonstrateClick($('#show-stats'), valid, () => setStatsEnabled(false))) return;
     await wait(500);
     if (!valid()) return;
     if (!await demonstrateClick($('#clean-button'), valid, () => {})) return;
