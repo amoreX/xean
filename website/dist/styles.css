@@ -236,6 +236,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .brand-letter > span { justify-self: center; transform-origin: 50% 80%; }
 .creator-credit { padding-bottom: 12px; color: var(--muted); font-size: 12px; line-height: 1.9; }
 .creator-credit a { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.creator-credit a, .creator-credit a * { cursor: pointer; }
 .creator-credit .icon { width: 11px; height: 11px; }
 @media (max-width: 1080px) { .hero-grid { gap: 48px; } .shell { width: calc(100% - 64px); } }
 @media (max-width: 900px) {
