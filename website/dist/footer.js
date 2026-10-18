@@ -1,6 +1,6 @@
 // Pointer-driven variation of the existing OriginKit-inspired weight interaction:
 // https://www.originkit.dev/components/weight-hover
-export function initFooter() {
+export function initFooter(cue) {
   const wordmark = document.querySelector('.brand-wordmark');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const rest = () => ({ weight: 800, x: 0, y: 0, tilt: 0 });
@@ -15,6 +15,8 @@ export function initFooter() {
   let visible = false;
   let previewPending = true;
   let previewStartedAt = null;
+  let previewSoundPlayed = false;
+  let previewAudio;
 
   function render(time) {
     if (previewStartedAt !== null) {
@@ -54,6 +56,7 @@ export function initFooter() {
 
   function follow(event) {
     if (!ready || reducedMotion.matches || document.hidden) return;
+    previewAudio?.abort();
     previewPending = false;
     previewStartedAt = null;
     setTargets(event.clientX, event.clientY);
@@ -80,6 +83,7 @@ export function initFooter() {
   }
 
   function release(immediate = false) {
+    previewAudio?.abort();
     previewStartedAt = null;
     pressed = false;
     letters.forEach(letter => { letter.target = rest(); });
@@ -98,6 +102,11 @@ export function initFooter() {
   function preview() {
     if (!entranceReady || !visible || !previewPending || previewStartedAt !== null || reducedMotion.matches || document.hidden) return;
     previewStartedAt = performance.now();
+    if (!previewSoundPlayed) {
+      previewSoundPlayed = true;
+      previewAudio = new AbortController();
+      cue('ready', { volume: .28, automatic: true, signal: previewAudio.signal });
+    }
     animate();
   }
 

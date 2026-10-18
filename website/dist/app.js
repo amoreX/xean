@@ -1,6 +1,6 @@
-import { cue } from './sounds.js?v=20261019-no-demo-controls';
+import { cue } from './sounds.js?v=20261019-intro-sound';
 import { initDemo } from './demo.js?v=20261019-popover-cleanup';
-import { initFooter } from './footer.js?v=20261019-footer-preview';
+import { initFooter } from './footer.js?v=20261019-intro-sound';
 
 const installPrompt = [
   'Help me install and launch xean, the native macOS menu bar cleaner, from https://github.com/amoreX/xean.',
@@ -55,4 +55,4 @@ copyButton.addEventListener('click', async () => {
 });
 document.querySelectorAll('[data-sound]').forEach(link => link.addEventListener('click', () => cue(link.dataset.sound)));
 initDemo(cue);
-initFooter();
+initFooter(cue);
