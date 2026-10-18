@@ -46,7 +46,9 @@ All source paths below are relative to [`Sources/BlitzClean`](../Sources/BlitzCl
 Popover content is 420 × 580 points, shortened for smaller screens. Quit uses 64 points of content height.
 The header theme button persists `CleanerModel.darkTheme` separately from cleanup preferences. AppDelegate
 observes this value and updates the existing popover's Aqua/Dark Aqua appearance, including native controls,
-without replacing the hosted view or changing cleanup state. The theme defaults to light.
+without replacing the hosted view or changing cleanup state. A temporary in-memory image of the old
+rendered view fades away over 180 ms; it does not intercept input or expose duplicate accessibility content.
+Reduce Motion disables the fade, and close/resize cancels it. The theme defaults to light.
 On macOS 26+, `CleanerPopover` styles AppKit's backdrop `NSGlassEffectView` as regular frosted glass with a
 neutral tint matching the theme. It skips the hosted content subtree, preserves full window/content opacity, and restores
 the standard material for Reduce Transparency or increased contrast. It retains native material on

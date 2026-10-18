@@ -11,13 +11,14 @@ final class CleanerPopover: NSPopover {
   var didDismiss: (() -> Void)?
   var darkTheme = false {
     didSet {
-      if darkTheme != oldValue { configureAppearance() }
+      if darkTheme != oldValue { transitionAppearance() }
     }
   }
   private(set) var isPresented = false
   private var generation = 0
   private var presentationAnchor: CleanerPresentationAnchor?
   private var accessibilityObserver: NSObjectProtocol?
+  private var themeSnapshot: CleanerThemeSnapshot?
   var window: NSWindow? { contentViewController?.view.window }
 
   func present(relativeTo rect: NSRect, of view: NSView) {
@@ -51,6 +52,7 @@ final class CleanerPopover: NSPopover {
   }
 
   override func close() {
+    removeThemeSnapshot()
     if let accessibilityObserver {
       NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver)
       self.accessibilityObserver = nil
@@ -77,6 +79,7 @@ final class CleanerPopover: NSPopover {
 
   func resize(to size: NSSize, animated: Bool) {
     guard contentSize != size else { return }
+    removeThemeSnapshot()
     let previousFrame = window?.frame
     contentSize = size
     configureAppearance()
@@ -84,6 +87,54 @@ final class CleanerPopover: NSPopover {
     let targetFrame = window.frame
     window.setFrame(previousFrame, display: false)
     animate { window.animator().setFrame(targetFrame, display: true) }
+  }
+
+  private func transitionAppearance() {
+    guard isPresented, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+      let frame = window?.contentView?.superview
+    else {
+      removeThemeSnapshot()
+      configureAppearance()
+      return
+    }
+    // Capture only our own rendered view. No window capture, file or screen permission is needed.
+    if let snapshot = themeSnapshot {
+      let opacity = snapshot.layer?.presentation()?.opacity ?? Float(snapshot.alphaValue)
+      snapshot.layer?.removeAllAnimations()
+      snapshot.alphaValue = CGFloat(opacity)
+    }
+    frame.layoutSubtreeIfNeeded()
+    guard let bitmap = frame.bitmapImageRepForCachingDisplay(in: frame.bounds) else {
+      removeThemeSnapshot()
+      configureAppearance()
+      return
+    }
+    frame.cacheDisplay(in: frame.bounds, to: bitmap)
+    let image = NSImage(size: frame.bounds.size)
+    image.addRepresentation(bitmap)
+    removeThemeSnapshot()
+    let snapshot = CleanerThemeSnapshot(frame: frame.bounds)
+    snapshot.image = image
+    snapshot.imageScaling = .scaleAxesIndependently
+    snapshot.autoresizingMask = [.width, .height]
+    snapshot.wantsLayer = true
+    snapshot.setAccessibilityElement(false)
+    frame.addSubview(snapshot, positioned: .above, relativeTo: nil)
+    themeSnapshot = snapshot
+    configureAppearance()
+    frame.layoutSubtreeIfNeeded()
+    animate(
+      { snapshot.animator().alphaValue = 0 },
+      completion: { [weak self, weak snapshot] in
+        guard let self, let snapshot, self.themeSnapshot === snapshot else { return }
+        self.removeThemeSnapshot()
+      })
+  }
+
+  private func removeThemeSnapshot() {
+    themeSnapshot?.layer?.removeAllAnimations()
+    themeSnapshot?.removeFromSuperview()
+    themeSnapshot = nil
   }
 
   private func configureAppearance() {
@@ -128,6 +179,12 @@ final class CleanerPopover: NSPopover {
       MainActor.assumeIsolated { completion?() }
     }
   }
+}
+
+/// A temporary image crossfades the theme without intercepting controls or duplicating accessibility.
+@MainActor
+private final class CleanerThemeSnapshot: NSImageView {
+  override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
 /// A transparent, noninteractive host keeps native popover placement independent of menu bar layout.

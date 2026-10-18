@@ -41,6 +41,7 @@ struct CleanerPopoverTests {
         && !NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
       let window = try #require(popover.window)
       let windowFrame = window.frame
+      let originalSubviewCount = frame.subviews.count
       for dark in [true, false] {
         popover.darkTheme = dark
         let glass = try #require(backdrops(in: frame).first)
@@ -52,6 +53,8 @@ struct CleanerPopoverTests {
         #expect(popover.window === window)
         #expect(window.frame == windowFrame)
       }
+      try await Task.sleep(for: .milliseconds(250))
+      #expect(frame.subviews.count == originalSubviewCount)
       #expect(controlGlass.style == .regular)
       #expect(controlGlass.tintColor == .systemBlue)
       #expect(controlGlass.alphaValue == 1)

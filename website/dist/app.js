@@ -1,5 +1,5 @@
 import { cue, setMuted } from './sounds.js';
-import { initDemo } from './demo.js?v=20261019-mobile-4';
+import { initDemo } from './demo.js?v=20261019-cleanup-cursor';
 import { initFooter } from './footer.js?v=20261019-footer-2';
 
 const installPrompt = [

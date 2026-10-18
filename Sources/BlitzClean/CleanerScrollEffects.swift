@@ -35,20 +35,27 @@ private struct CleanerScrollViewport: ViewModifier {
   @Environment(\.colorSchemeContrast) private var contrast
 
   func body(content: Content) -> some View {
-    content
-      .scrollIndicators(.never)
-      .mask {
-        if contrast == .increased {
+    Group {
+      if #available(macOS 26.0, *) {
+        content.scrollEdgeEffectHidden()
+      } else {
+        content
+      }
+    }
+    .scrollIndicators(.never)
+    .scrollContentBackground(.hidden)
+    .mask {
+      if contrast == .increased {
+        Rectangle()
+      } else {
+        VStack(spacing: 0) {
+          LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+            .frame(height: 18)
           Rectangle()
-        } else {
-          VStack(spacing: 0) {
-            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
-              .frame(height: 18)
-            Rectangle()
-            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-              .frame(height: 14)
-          }
+          LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+            .frame(height: 14)
         }
       }
+    }
   }
 }

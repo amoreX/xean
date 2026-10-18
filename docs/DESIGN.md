@@ -17,8 +17,10 @@ standard bordered styles on earlier systems. Do not add custom tints, button out
 Keep sections unboxed, with compact spacing and no horizontal dividers.
 
 The header is one line: lowercase “xean”, available space, a sun/moon theme button, and an accessible power icon.
-The theme button switches directly between light and dark, updates the entire native popover in place,
-and remembers the choice across launches. Its help and accessible label describe the destination theme.
+The theme button crossfades the rendered popover over 180 ms without moving or rebuilding it, and
+remembers the choice across launches. The temporary image is local to the view, ignores input and
+accessibility, and is removed when the fade finishes or the panel closes/resizes. Rapid switches start
+from the current blend; Reduce Motion switches immediately. Its help and accessible label describe the destination theme.
 This control belongs only to the native app; do not add it to the website preview.
 Power and ⌘Q replace the contents with a compact “Quit xean?”, Cancel and Quit row. This is the same
 popover, resized to 64 points of content, not a modal. Cancel or Escape restores the cleaner. Dismissing
@@ -30,10 +32,13 @@ scaling. Popover visibility uses a short whole-window fade. Disclosures animate 
 leaving text layout unchanged. Confirmed removals use a red center-out background sweep (320 ms),
 a 120 ms hold, a short 18-point slide and fade (240 ms), then height collapse (280 ms). Present bulk
 removals one at a time without delaying filesystem operations; show the result after the last animation.
-Use the same removal treatment for an individual Delete and the website preview. Unmount closed controls after the collapse so they
+Use the same removal treatment for an individual Delete and the website preview. The website runs this
+faster: 200 ms sweep, 40 ms hold, 140 ms departure and 160 ms collapse, with a 120 ms per-item lead-in.
+Unmount closed controls after the collapse so they
 cannot retain keyboard focus or accessibility entries. Reduce Motion makes these changes immediate.
 Mouse-wheel steps ease over 180 ms; trackpads retain native momentum. Preserve the short scroll-edge
-blur and fade while keeping the header and footer fixed. Do not scale rows as they scroll. Increased
+blur and fade while keeping the header and footer fixed. Hide the additional macOS 26 scroll-edge
+effect; blur only the rows, not a second backdrop rectangle over the glass. Do not scale rows as they scroll. Increased
 Contrast removes the edge fade; Reduce Motion and Increased Contrast disable scroll blur.
 
 Auto-clean is the first row, with an editable GB threshold. “Notify when low” immediately follows

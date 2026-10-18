@@ -21,7 +21,7 @@ const icon = name => '<svg class="icon" aria-hidden="true"><use href="#' + name 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const sizeLabel = mb => mb >= 1000 ? (mb / 1000).toFixed(1).replace(/\.0$/, '') + ' GB' : mb + ' MB';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const motion = { row: 240, value: 400, view: 220, scroll: 650, pointer: 440, sweep: 440, depart: 240, collapse: 280, zoom: 800 };
+const motion = { row: 240, value: 400, view: 220, scroll: 650, pointer: 440, sweep: 240, depart: 140, collapse: 160, zoom: 800 };
 const easeInOut = progress => progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
 
 export function initDemo(cue) {
@@ -62,8 +62,11 @@ export function initDemo(cue) {
 
   function focusDesktop(focused) {
     stage.classList.toggle('focused', focused);
-    $('#desktop-hint').hidden = focused;
     if (focused) notifications.forEach(notification => notification.classList.remove('visible'));
+  }
+
+  function hideCursor() {
+    cursor.classList.remove('visible', 'pressed');
   }
 
   function animateValue(element, target, format, initial = target) {
@@ -146,6 +149,7 @@ export function initDemo(cue) {
     }
     $('#open-preview').setAttribute('aria-label', next === 'closed' ? 'Open xean preview' : 'Close xean preview');
     if (next === 'closed') {
+      hideCursor();
       focusDesktop(false);
       $('#automatic-row').hidden = false;
       $('#auto-confirm').hidden = true;
@@ -306,7 +310,7 @@ export function initDemo(cue) {
     $('#cleanup-queue').innerHTML = items.map(item => '<div class="queue-row" id="queue-' + item.id + '"><div class="queue-clip"><div class="queue-content"><div><strong>' + item.name + '</strong><small>' + item.path + '</small></div><span>' + sizeLabel(item.mb) + '</span></div></div></div>').join('');
     $('#cleanup-queue').scrollTop = 0;
     setScreen('scanning');
-    await wait(800);
+    await wait(reducedMotion.matches ? 0 : 500);
     if (current !== version) return;
     $('#cleanup-title').textContent = 'Cleaning…';
     $('#cleanup-count').textContent = '0 / ' + items.length;
@@ -317,7 +321,7 @@ export function initDemo(cue) {
     for (const item of items) {
       const row = $('#queue-' + item.id);
       row.classList.add('current');
-      await wait(audible ? 600 : 350);
+      await wait(reducedMotion.matches ? 0 : 120);
       if (current !== version) return;
       item.removed = true;
       removed++;
@@ -326,10 +330,8 @@ export function initDemo(cue) {
       free += item.mb / 1000;
       updateSpace();
       if (!await removeRow(row, current)) return;
-      await wait(reducedMotion.matches ? 0 : 120);
-      if (current !== version) return;
     }
-    await wait(450);
+    await wait(reducedMotion.matches ? 0 : 180);
     if (current !== version) return;
     busy = false;
     $('#result-title').textContent = items.length ? 'All clean' : 'Nothing to clean';
@@ -373,7 +375,7 @@ export function initDemo(cue) {
     syncSelection();
     renderMetrics();
     updateSpace();
-    cursor.classList.remove('visible', 'pressed');
+    hideCursor();
     cursor.style.removeProperty('--cursor-x');
     cursor.style.removeProperty('--cursor-y');
     notifications.forEach(notification => notification.classList.toggle('visible', reducedMotion.matches));
@@ -392,7 +394,7 @@ export function initDemo(cue) {
     tourVersion++;
     tourRunning = false;
     scrollGeneration++;
-    cursor.classList.remove('visible', 'pressed');
+    hideCursor();
     document.querySelectorAll('.tour-highlight, .tour-pressed').forEach(control => control.classList.remove('tour-highlight', 'tour-pressed'));
     updateTourControl();
   }
@@ -429,6 +431,7 @@ export function initDemo(cue) {
     await activation;
     await wait(240);
     control.classList.remove('tour-highlight');
+    if (valid()) hideCursor();
     return valid();
   }
 
@@ -503,7 +506,6 @@ export function initDemo(cue) {
     await wait(500);
     if (!valid()) return;
     if (!await demonstrateClick($('#clean-button'), valid, () => {})) return;
-    cursor.classList.remove('visible');
     await clean(false);
     if (!valid()) return;
     await wait(3200);
@@ -611,10 +613,6 @@ export function initDemo(cue) {
     } else { version++; busy = false; setScreen('closed'); }
   }
   $('#open-preview').addEventListener('click', togglePreview);
-  $('#desktop-hint').addEventListener('click', () => {
-    togglePreview();
-    $('#open-preview').focus({ preventScroll: true });
-  });
   $('#tour-toggle').addEventListener('click', () => {
     cue('tap');
     if (tourEnabled) pauseTour();
@@ -635,6 +633,7 @@ export function initDemo(cue) {
     visible = next;
     tourVersion++;
     tourRunning = false;
+    hideCursor();
     if (visible && tourEnabled) { reset(); runTour(); }
   }
   window.addEventListener('scroll', updateVisibility, { passive: true });
@@ -642,6 +641,7 @@ export function initDemo(cue) {
   document.addEventListener('visibilitychange', () => {
     tourVersion++;
     tourRunning = false;
+    hideCursor();
     if (!document.hidden && tourEnabled && visible) { reset(); runTour(); }
   });
   reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) pauseTour(); });
