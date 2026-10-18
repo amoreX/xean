@@ -1,5 +1,5 @@
 import { cue } from './sounds.js?v=20261019-no-demo-controls';
-import { initDemo } from './demo.js?v=20261019-no-demo-controls';
+import { initDemo } from './demo.js?v=20261019-page-arrival';
 import { initFooter } from './footer.js?v=20261019-footer-pointer';
 
 const installPrompt = [

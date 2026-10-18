@@ -35,6 +35,7 @@ export function initDemo(cue) {
   let tourEnabled = !reducedMotion.matches;
   let tourVersion = 0;
   let tourRunning = false;
+  let entranceReady = false;
   let visible = true;
   let sample = 0;
   let memoryMode = 'available';
@@ -429,7 +430,7 @@ export function initDemo(cue) {
   }
 
   async function runTour() {
-    if (!tourEnabled || tourRunning || !visible || document.hidden) return;
+    if (!entranceReady || !tourEnabled || tourRunning || !visible || document.hidden) return;
     tourRunning = true;
     const current = ++tourVersion;
     const valid = () => current === tourVersion && tourEnabled && visible && !document.hidden;
@@ -631,6 +632,9 @@ export function initDemo(cue) {
   reset();
   updateVisibility();
   setInterval(sampleMetrics, 2000);
-  runTour();
+  Promise.allSettled(panel.closest('.demo').getAnimations().map(animation => animation.finished)).then(() => {
+    entranceReady = true;
+    runTour();
+  });
 }
 
