@@ -21,14 +21,24 @@ export function initFooter(cue) {
 
   function soundForPointer(event, hover = true) {
     if (!event.isTrusted || !ready || document.hidden || (hover && event.pointerType === 'touch')) return;
-    const index = letters.findIndex(({ slot }) => {
+    let index = letters.findIndex(({ slot }) => {
       const bounds = slot.getBoundingClientRect();
       return event.clientX >= bounds.left && event.clientX <= bounds.right &&
         event.clientY >= bounds.top && event.clientY <= bounds.bottom;
     });
+    if (index < 0 && hover && hoveredLetter >= 0 && event.type === 'pointerleave') {
+      const bounds = wordmark.getBoundingClientRect();
+      if (event.clientY >= bounds.top && event.clientY <= bounds.bottom) {
+        index = event.clientX < bounds.left ? 0 : letters.length - 1;
+      }
+    }
     if (index < 0 || (hover && index === hoveredLetter)) return;
+    const direction = hover && hoveredLetter >= 0 ? Math.sign(index - hoveredLetter) : 1;
+    const first = hover && hoveredLetter >= 0 ? hoveredLetter + direction : index;
+    for (let crossed = first; direction > 0 ? crossed <= index : crossed >= index; crossed += direction) {
+      cue('tap', { hover, volume: .6, playbackRate: [0.9, 1, 1.12, 1.26][crossed] });
+    }
     hoveredLetter = index;
-    cue('tap', { hover, volume: .6, playbackRate: [0.9, 1, 1.12, 1.26][index] });
   }
 
   function render(time) {
@@ -146,7 +156,7 @@ export function initFooter(cue) {
     if (event.pointerType === 'touch') release();
     else follow(event);
   });
-  wordmark.addEventListener('pointerleave', () => release());
+  wordmark.addEventListener('pointerleave', event => { soundForPointer(event); release(); });
   wordmark.addEventListener('pointercancel', () => release());
   reducedMotion.addEventListener('change', () => { previewPending = false; release(true); });
   document.addEventListener('visibilitychange', () => {

@@ -6,6 +6,8 @@ const files = new Map(cues.map(name => [name, fetch(new URL('./assets/sounds/' +
 const buffers = new Map();
 let context;
 let player;
+const hoverPlayers = new Set();
+let nextHoverAt = 0;
 let latest = 0;
 let lastPlay = -Infinity;
 
@@ -34,14 +36,13 @@ export async function cue(name, { volume = 0.7, automatic = false, hover = false
   if (document.hidden || signal?.aborted) return false;
   const now = performance.now();
   if (automatic && now - lastPlay < 300) return false;
-  if (hover && now - lastPlay < 120) return false;
-  if (['tap', 'select', 'toggle'].includes(name) && now - lastPlay < 80) return false;
+  if (!hover && ['tap', 'select', 'toggle'].includes(name) && now - lastPlay < 80) return false;
   try {
     context ??= new (window.AudioContext || window.webkitAudioContext)();
     // Hover cannot unlock audio. Skip it instead of queueing sounds for a later click.
     if (hover && context.state !== 'running') return false;
-    if (!automatic) lastPlay = now;
-    const request = ++latest;
+    if (!automatic && !hover) lastPlay = now;
+    const request = hover ? latest : ++latest;
     if (automatic) {
       // Never leave an intro cue waiting for a later, unrelated user gesture.
       if (!await unlockAudio()) return false;
@@ -49,19 +50,36 @@ export async function cue(name, { volume = 0.7, automatic = false, hover = false
       await context.resume();
     }
     if (!buffers.has(name)) {
-      const bytes = await files.get(name);
-      if (!bytes) return false;
-      buffers.set(name, await context.decodeAudioData(bytes.slice(0)));
+      buffers.set(name, files.get(name).then(bytes => bytes && context.decodeAudioData(bytes.slice(0))));
     }
+    const buffer = await buffers.get(name);
+    if (!buffer) return false;
     if (request !== latest || document.hidden || signal?.aborted || ((automatic || hover) && performance.now() - now > 250)) return false;
-    player?.stop();
     const source = context.createBufferSource();
-    player = source;
-    player.buffer = buffers.get(name);
-    player.playbackRate.value = playbackRate;
+    source.buffer = buffer;
+    source.playbackRate.value = playbackRate;
     const gain = context.createGain();
     gain.gain.value = volume;
-    player.connect(gain).connect(context.destination);
+    source.connect(gain).connect(context.destination);
+    if (hover) {
+      // Keep every crossing audible, including letters crossed within one mouse event.
+      // Short overlapping voices avoid cutoffs; cap the scheduling tail during rapid reversals.
+      const startAt = Math.max(context.currentTime, Math.min(nextHoverAt, context.currentTime + .12));
+      nextHoverAt = startAt + .03;
+      hoverPlayers.add(source);
+      source.addEventListener('ended', () => {
+        hoverPlayers.delete(source);
+        source.disconnect();
+        gain.disconnect();
+      }, { once: true });
+      gain.gain.setValueAtTime(volume, startAt);
+      gain.gain.setTargetAtTime(0, startAt + .06, .012);
+      source.start(startAt);
+      source.stop(startAt + .12);
+      return true;
+    }
+    player?.stop();
+    player = source;
     if (signal) {
       const fadeOut = () => {
         gain.gain.setTargetAtTime(0, context.currentTime, .02);
@@ -79,5 +97,11 @@ export async function cue(name, { volume = 0.7, automatic = false, hover = false
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { latest++; player?.stop(); }
+  if (document.hidden) {
+    latest++;
+    player?.stop();
+    hoverPlayers.forEach(source => source.stop());
+    hoverPlayers.clear();
+    nextHoverAt = 0;
+  }
 });
