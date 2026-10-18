@@ -383,12 +383,6 @@ export function initDemo(cue) {
     scroller.scrollTop = 0;
   }
 
-  function updateTourControl() {
-    const button = $('#tour-toggle');
-    button.setAttribute('aria-label', tourEnabled ? 'Pause demo' : 'Play demo');
-    button.title = tourEnabled ? 'Pause demo' : 'Play demo';
-    button.querySelector('use').setAttribute('href', tourEnabled ? '#pause' : '#play');
-  }
   function pauseTour() {
     tourEnabled = false;
     tourVersion++;
@@ -396,7 +390,6 @@ export function initDemo(cue) {
     scrollGeneration++;
     hideCursor();
     document.querySelectorAll('.tour-highlight, .tour-pressed').forEach(control => control.classList.remove('tour-highlight', 'tour-pressed'));
-    updateTourControl();
   }
 
   async function demonstrateClick(control, valid, activate) {
@@ -613,19 +606,6 @@ export function initDemo(cue) {
     } else { version++; busy = false; setScreen('closed'); }
   }
   $('#open-preview').addEventListener('click', togglePreview);
-  $('#tour-toggle').addEventListener('click', () => {
-    cue('tap');
-    if (tourEnabled) pauseTour();
-    else { tourEnabled = true; reset(); updateTourControl(); runTour(); }
-  });
-  $('#replay-demo').addEventListener('click', () => {
-    cue('tap');
-    pauseTour();
-    reset();
-    tourEnabled = !reducedMotion.matches;
-    updateTourControl();
-    runTour();
-  });
   function updateVisibility() {
     const bounds = stage.getBoundingClientRect();
     const next = bounds.bottom > 0 && bounds.top < window.innerHeight;
@@ -649,7 +629,6 @@ export function initDemo(cue) {
   new ResizeObserver(fitDesktop).observe(stage);
   requestAnimationFrame(() => requestAnimationFrame(() => stage.classList.add('ready')));
   reset();
-  updateTourControl();
   updateVisibility();
   setInterval(sampleMetrics, 2000);
   runTour();

@@ -228,12 +228,6 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .result-content .result-bytes { font-size: 17px; font-weight: 500; color: #252725; }
 .result-content p { color: #656b61; font-size: 13px; line-height: 1.45; }
 #result-kept { font-size: 11px; }
-.demo-caption { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 12px; font-size: 9px; color: var(--muted); }
-.demo-tools { display: flex; align-items: center; gap: 3px; }
-.demo-tools button { display: grid; place-items: center; width: 29px; height: 29px; padding: 6px; border: 0; border-radius: 50%; background: transparent; transition: transform 180ms var(--ease), background 180ms; }
-.demo-tools button:hover { background: #e4ebe0; }
-.demo-tools button:active { transform: scale(.88,.94); }
-.demo-tools .icon { width: 14px; height: 14px; }
 .brand-footer { display: flex; align-items: baseline; gap: 34px; padding-top: 4px; padding-bottom: 32px; }
 .brand-wordmark { font-family: 'Manrope Wordmark',Manrope,sans-serif; font-size: clamp(110px,16vw,206px); font-weight: 800; line-height: 1.08; letter-spacing: -.085em; margin-left: -.045em; white-space: nowrap; flex-shrink: 0; user-select: none; }
 .brand-letter { display: inline-grid; vertical-align: baseline; }
@@ -255,12 +249,9 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
   .get-trigger { height: 46px; font-size: 13px; }
   .install-options > * { min-height: 44px; font-size: 13px; }
   .copy-fallback textarea { font-size: 16px; }
-  .demo-stage { --focus-height: clamp(320px,calc(100svh - 64px),544px); height: calc(var(--desktop-height) + 54px); scroll-margin-top: 12px; transition: height 800ms cubic-bezier(.4,0,.2,1); }
+  .demo-stage { --focus-height: clamp(320px,calc(100svh - 64px),544px); height: var(--desktop-height); scroll-margin-top: 12px; transition: height 800ms cubic-bezier(.4,0,.2,1); }
   .demo-stage.focused { height: var(--focus-height); }
   .desktop-viewport { top: 0; }
-  .demo-tools { gap: 4px; }
-  .demo-tools button { width: 44px; height: 44px; padding: 13px; }
-  .demo-caption { padding-top: 8px; }
   .setting-row { min-height: 44px; gap: 6px; }
   .number-field { height: 34px; font-size: 16px; }
   .switch::before { content: ''; position: absolute; inset: -10px 0; }

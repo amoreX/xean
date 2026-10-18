@@ -1,5 +1,5 @@
-import { cue, setMuted } from './sounds.js';
-import { initDemo } from './demo.js?v=20261019-cleanup-cursor';
+import { cue } from './sounds.js?v=20261019-no-demo-controls';
+import { initDemo } from './demo.js?v=20261019-no-demo-controls';
 import { initFooter } from './footer.js?v=20261019-footer-pointer';
 
 const installPrompt = [
@@ -54,15 +54,5 @@ copyButton.addEventListener('click', async () => {
   }
 });
 document.querySelectorAll('[data-sound]').forEach(link => link.addEventListener('click', () => cue(link.dataset.sound)));
-const muteButton = document.querySelector('#sound-toggle');
-muteButton.addEventListener('click', () => {
-  const muted = muteButton.getAttribute('aria-pressed') !== 'true';
-  setMuted(muted);
-  muteButton.setAttribute('aria-pressed', String(muted));
-  muteButton.setAttribute('aria-label', muted ? 'Enable sounds' : 'Mute sounds');
-  muteButton.title = muted ? 'Enable sounds' : 'Mute sounds';
-  muteButton.querySelector('use').setAttribute('href', muted ? '#mute' : '#sound');
-  if (!muted) cue('toggle');
-});
 initDemo(cue);
 initFooter();
