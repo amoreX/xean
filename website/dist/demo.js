@@ -21,7 +21,7 @@ const icon = name => '<svg class="icon" aria-hidden="true"><use href="#' + name 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const sizeLabel = mb => mb >= 1000 ? (mb / 1000).toFixed(1).replace(/\.0$/, '') + ' GB' : mb + ' MB';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const motion = { row: 320, value: 480, view: 280, scroll: 950, sweep: 440, depart: 240, collapse: 280, zoom: 1000 };
+const motion = { row: 240, value: 400, view: 220, scroll: 650, pointer: 440, sweep: 440, depart: 240, collapse: 280, zoom: 800 };
 const easeInOut = progress => progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
 
 export function initDemo(cue) {
@@ -95,13 +95,27 @@ export function initDemo(cue) {
   }
 
   function renderMetrics() {
-    $('#menu-stats').classList.toggle('stats-hidden', !$('#show-stats').checked);
+    const stats = $('#menu-stats');
+    const before = stats.getBoundingClientRect().width;
+    stats.getAnimations().forEach(animation => animation.cancel());
+    stats.classList.toggle('stats-hidden', !$('#show-stats').checked);
     for (const name of ['cpu', 'memory', 'disk']) {
       $('#' + name + '-stat').hidden = !$('#show-' + name).checked;
     }
     const checked = [...document.querySelectorAll('.metric-toggle')].filter(input => input.checked);
     document.querySelectorAll('.metric-toggle').forEach(input => { input.disabled = checked.length === 1 && input.checked; });
     $('#memory-format').hidden = !$('#show-memory').checked;
+    const after = stats.getBoundingClientRect().width;
+    if (Math.abs(after - before) > 1 && !reducedMotion.matches) {
+      stats.animate([{ width: before + 'px' }, { width: after + 'px' }], { duration: 200, easing: 'ease-in-out' });
+    }
+  }
+
+  function setStatsEnabled(enabled) {
+    $('#show-stats').checked = enabled;
+    $('#stats-options').classList.toggle('expanded', enabled);
+    $('#stats-options').inert = !enabled;
+    renderMetrics();
   }
 
   function sampleMetrics() {
@@ -292,7 +306,7 @@ export function initDemo(cue) {
     $('#cleanup-queue').innerHTML = items.map(item => '<div class="queue-row" id="queue-' + item.id + '"><div class="queue-clip"><div class="queue-content"><div><strong>' + item.name + '</strong><small>' + item.path + '</small></div><span>' + sizeLabel(item.mb) + '</span></div></div></div>').join('');
     $('#cleanup-queue').scrollTop = 0;
     setScreen('scanning');
-    await wait(audible ? 850 : 1200);
+    await wait(800);
     if (current !== version) return;
     $('#cleanup-title').textContent = 'Cleaning…';
     $('#cleanup-count').textContent = '0 / ' + items.length;
@@ -303,7 +317,7 @@ export function initDemo(cue) {
     for (const item of items) {
       const row = $('#queue-' + item.id);
       row.classList.add('current');
-      await wait(audible ? 600 : 800);
+      await wait(audible ? 600 : 350);
       if (current !== version) return;
       item.removed = true;
       removed++;
@@ -400,20 +414,20 @@ export function initDemo(cue) {
     cursor.style.setProperty('--cursor-x', (x - scene.left) / scale - 3 + 'px');
     cursor.style.setProperty('--cursor-y', (bounds.top + bounds.height / 2 - scene.top) / scale - 2 + 'px');
     cursor.classList.add('visible');
-    await wait(700);
+    await wait(motion.pointer);
     if (!valid()) return false;
     control.classList.add('tour-highlight');
-    await wait(350);
+    await wait(200);
     if (!valid()) return false;
     cursor.classList.add('pressed');
     control.classList.add('tour-pressed');
-    await wait(220);
+    await wait(140);
     if (!valid()) return false;
     const activation = activate();
     cursor.classList.remove('pressed');
     control.classList.remove('tour-pressed');
     await activation;
-    await wait(420);
+    await wait(240);
     control.classList.remove('tour-highlight');
     return valid();
   }
@@ -427,38 +441,19 @@ export function initDemo(cue) {
     if (!valid()) return;
     for (const notification of notifications) {
       notification.classList.add('visible');
-      await wait(900);
+      await wait(700);
       if (!valid()) return;
     }
-    await wait(900);
+    await wait(600);
     if (!valid()) return;
     if (!await demonstrateClick($('#open-preview'), valid, () => setScreen('settings'))) return;
-    await wait(550);
+    await wait(300);
     if (!valid()) return;
     focusDesktop(true);
-    await wait(motion.zoom + 1200);
+    await wait(motion.zoom + 700);
     if (!valid()) return;
 
-    if (!await demonstrateClick($('#auto-clean'), valid, () => {
-      $('#automatic-row').hidden = true;
-      $('#auto-confirm').hidden = false;
-    })) return;
-    await wait(900);
-    if (!valid()) return;
-    if (!await demonstrateClick($('[data-action="confirm-auto"]'), valid, () => {
-      $('#auto-clean').checked = true;
-      $('#automatic-row').hidden = false;
-      $('#auto-confirm').hidden = true;
-      syncSelection();
-    })) return;
-    if (!await demonstrateClick($('#notify-low'), valid, () => {
-      $('#notify-low').checked = true;
-      updateWarning();
-    })) return;
-    await wait(1000);
-    if (!valid()) return;
-
-    for (const category of categories) {
+    for (const category of categories.filter(category => ['claude', 'worktrees'].includes(category.id))) {
       const row = $('#category-' + category.id);
       if (!await scrollToElement(row) || !valid()) return;
       if (category.id === 'worktrees') {
@@ -469,12 +464,12 @@ export function initDemo(cue) {
       }
       const trigger = row.querySelector('.category-trigger');
       if (!await demonstrateClick(trigger, valid, () => expandCategory(category.id, true))) return;
-      await wait(category.id === 'worktrees' ? 2400 : 1300);
+      await wait(category.id === 'worktrees' ? 1800 : 1100);
       if (!valid()) return;
       const lastItem = row.querySelector('.inventory-row:last-child');
       if (lastItem.getBoundingClientRect().bottom > scroller.getBoundingClientRect().bottom - 16) {
         if (!await scrollToElement(lastItem) || !valid()) return;
-        await wait(1800);
+        await wait(1200);
         if (!valid()) return;
       }
       if (!await demonstrateClick(trigger, valid, () => expandCategory(category.id, false))) return;
@@ -483,25 +478,30 @@ export function initDemo(cue) {
     }
 
     if (!await scrollToElement($('.app-settings')) || !valid()) return;
-    await wait(1300);
+    await wait(500);
     if (!valid()) return;
-    for (const mode of ['used', 'percent', 'available']) {
-      if (!await demonstrateClick($('[data-format="' + mode + '"]'), valid, () => {
-        memoryMode = mode;
-        document.querySelectorAll('[data-format]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.format === mode)));
-        sampleMetrics();
-      })) return;
-      await wait(700);
+    for (const enabled of [false, true]) {
+      if (!await demonstrateClick($('#show-stats'), valid, () => setStatsEnabled(enabled))) return;
+      await wait(450);
       if (!valid()) return;
     }
-    if (!await demonstrateClick($('#start-login'), valid, () => { $('#start-login').checked = true; })) return;
-    await wait(1000);
+    for (const metric of ['cpu', 'memory', 'disk']) {
+      for (const enabled of [false, true]) {
+        if (!await demonstrateClick($('#show-' + metric), valid, () => {
+          $('#show-' + metric).checked = enabled;
+          renderMetrics();
+        })) return;
+        await wait(300);
+        if (!valid()) return;
+      }
+    }
+    await wait(500);
     if (!valid()) return;
     if (!await demonstrateClick($('#clean-button'), valid, () => {})) return;
     cursor.classList.remove('visible');
     await clean(false);
     if (!valid()) return;
-    await wait(6000);
+    await wait(3200);
     if (!valid()) return;
     if (!await demonstrateClick($('[data-action="done"]'), valid, () => setScreen('closed'))) return;
     await wait(motion.zoom);
@@ -573,10 +573,7 @@ export function initDemo(cue) {
     cue('select');
   }));
   $('#show-stats').addEventListener('change', () => {
-    const enabled = $('#show-stats').checked;
-    $('#stats-options').classList.toggle('expanded', enabled);
-    $('#stats-options').inert = !enabled;
-    renderMetrics();
+    setStatsEnabled($('#show-stats').checked);
     cue('toggle');
   });
   document.querySelectorAll('.metric-toggle').forEach(input => input.addEventListener('change', () => { renderMetrics(); cue('toggle'); }));
