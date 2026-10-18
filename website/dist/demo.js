@@ -236,7 +236,10 @@ export function initDemo(cue) {
       item.removed = true;
       removed++;
       mb += item.mb;
-      $('#queue-' + item.id).classList.add('collapsed');
+      const row = $('#queue-' + item.id);
+      row.classList.add('collapsed');
+      row.inert = true;
+      row.setAttribute('aria-hidden', 'true');
       $('#cleanup-count').textContent = removed + ' / ' + items.length;
       free += item.mb / 1000;
       updateSpace();
@@ -424,12 +427,17 @@ export function initDemo(cue) {
     updateTourControl();
     runTour();
   });
-  const visibility = new IntersectionObserver(([entry]) => {
-    visible = entry.isIntersecting;
-    if (!visible) { tourVersion++; tourRunning = false; }
-    else if (tourEnabled) { reset(); runTour(); }
-  }, { threshold: 0.25 });
-  visibility.observe(panel);
+  function updateVisibility() {
+    const bounds = panel.getBoundingClientRect();
+    const next = bounds.bottom > 0 && bounds.top < window.innerHeight;
+    if (next === visible) return;
+    visible = next;
+    tourVersion++;
+    tourRunning = false;
+    if (visible && tourEnabled) { reset(); runTour(); }
+  }
+  window.addEventListener('scroll', updateVisibility, { passive: true });
+  window.addEventListener('resize', updateVisibility);
   document.addEventListener('visibilitychange', () => {
     tourVersion++;
     tourRunning = false;
@@ -438,6 +446,7 @@ export function initDemo(cue) {
   reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) pauseTour(); });
   reset();
   updateTourControl();
+  updateVisibility();
   setInterval(sampleMetrics, 2000);
   runTour();
 }
