@@ -20,6 +20,8 @@ const icon = name => '<svg class="icon" aria-hidden="true"><use href="#' + name 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const sizeLabel = mb => mb >= 1000 ? (mb / 1000).toFixed(1).replace(/\.0$/, '') + ' GB' : mb + ' MB';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const motion = { row: 320, value: 480, view: 240, scroll: 850 };
+const easeInOut = progress => progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
 
 export function initDemo(cue) {
   let categories;
@@ -36,6 +38,7 @@ export function initDemo(cue) {
   let sample = 0;
   let memoryMode = 'available';
   let feedbackTimer;
+  let scrollGeneration = 0;
   const panel = $('#cleaner');
   const scroller = $('#app-scroll');
   const numberAnimations = new Map();
@@ -48,7 +51,7 @@ export function initDemo(cue) {
     numberAnimations.set(element, state);
     const start = performance.now();
     function step(now) {
-      const progress = reducedMotion.matches || document.hidden ? 1 : Math.min(1, (now - start) / 180);
+      const progress = reducedMotion.matches || document.hidden ? 1 : Math.min(1, (now - start) / motion.value);
       state.value = from + (target - from) * (1 - Math.pow(1 - progress, 3));
       element.textContent = format(state.value);
       if (progress < 1) state.frame = requestAnimationFrame(step);
@@ -90,6 +93,8 @@ export function initDemo(cue) {
   }
 
   function setScreen(next) {
+    const views = [$('#settings-view'), $('#cleanup-view'), $('#result-view')];
+    const previous = views.find(view => !view.hidden);
     screen = next;
     panel.dataset.screen = next;
     $('#quit-view').hidden = next !== 'quit';
@@ -97,6 +102,11 @@ export function initDemo(cue) {
     $('#settings-view').hidden = next !== 'settings';
     $('#cleanup-view').hidden = !['scanning', 'cleaning'].includes(next);
     $('#result-view').hidden = next !== 'result';
+    const active = views.find(view => !view.hidden);
+    if (active && active !== previous && !reducedMotion.matches) {
+      active.getAnimations().forEach(animation => animation.cancel());
+      active.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: motion.view, easing: 'ease-out' });
+    }
     $('#open-preview').setAttribute('aria-label', next === 'closed' ? 'Open xean preview' : 'Close xean preview');
     if (next === 'closed') {
       $('#automatic-row').hidden = false;
@@ -127,9 +137,18 @@ export function initDemo(cue) {
 
   function renderInventory(category) {
     const target = $('#inventory-' + category.id);
+    const hadContent = target.childElementCount > 0;
+    const before = target.getBoundingClientRect().height;
+    target.getAnimations().forEach(animation => animation.cancel());
     target.innerHTML = category.loading ? '<p class="inventory-message">Checking…</p>' :
       category.items.filter(item => !item.removed).map(inventoryMarkup).join('') || '<p class="inventory-message">No items 50 MB or larger.</p>';
     $('#category-' + category.id).querySelector('.category-loading').hidden = !category.loading;
+    const after = target.getBoundingClientRect().height;
+    if (hadContent && Math.abs(after - before) > 1 && !reducedMotion.matches) {
+      target.animate([{ height: before + 'px' }, { height: after + 'px' }], {
+        duration: motion.row, easing: 'cubic-bezier(.4,0,.2,1)'
+      });
+    }
   }
 
   function renderCategories() {
@@ -155,7 +174,7 @@ export function initDemo(cue) {
       const current = version;
       category.loading = true;
       renderInventory(category);
-      await wait(460);
+      await wait(550);
       if (current !== version) return;
       category.loaded = true;
       category.loading = false;
@@ -164,15 +183,20 @@ export function initDemo(cue) {
   }
 
   function scrollToCategory(id) {
-    const target = $('#category-' + id).offsetTop - 12;
+    const current = ++scrollGeneration;
+    const target = Math.max(0, Math.min($('#category-' + id).offsetTop - 16, scroller.scrollHeight - scroller.clientHeight));
     const from = scroller.scrollTop;
     const start = performance.now();
-    function step(now) {
-      const progress = reducedMotion.matches ? 1 : Math.min(1, (now - start) / 180);
-      scroller.scrollTop = from + (target - from) * (1 - Math.pow(1 - progress, 3));
-      if (progress < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
+    return new Promise(resolve => {
+      function step(now) {
+        if (current !== scrollGeneration) { resolve(false); return; }
+        const progress = reducedMotion.matches ? 1 : Math.min(1, (now - start) / motion.scroll);
+        scroller.scrollTop = from + (target - from) * easeInOut(progress);
+        if (progress < 1) requestAnimationFrame(step);
+        else resolve(true);
+      }
+      requestAnimationFrame(step);
+    });
   }
 
   function feedback(text) {
@@ -198,7 +222,7 @@ export function initDemo(cue) {
     item.removed = true;
     free += item.mb / 1000;
     updateSpace();
-    await wait(reducedMotion.matches ? 0 : 180);
+    await wait(reducedMotion.matches ? 0 : motion.row);
     if (current !== version) return;
     row.remove();
     const category = categories.find(category => category.items.includes(item));
@@ -218,33 +242,37 @@ export function initDemo(cue) {
     busy = true;
     if (audible) cue('tap');
     $('#cleanup-title').textContent = 'Checking selected items…';
-    $('#cleanup-count').textContent = '';
-    $('#cleanup-queue').innerHTML = '';
+    $('#cleanup-count').textContent = items.length + (items.length === 1 ? ' item' : ' items');
+    $('#cleanup-queue').innerHTML = items.map(item => '<div class="queue-row" id="queue-' + item.id + '"><div class="queue-clip"><div class="queue-content"><div><strong>' + item.name + '</strong><small>' + item.path + '</small></div><span>' + sizeLabel(item.mb) + '</span></div></div></div>').join('');
+    $('#cleanup-queue').scrollTop = 0;
     setScreen('scanning');
-    await wait(720);
+    await wait(audible ? 850 : 1200);
     if (current !== version) return;
     $('#cleanup-title').textContent = 'Cleaning…';
     $('#cleanup-count').textContent = '0 / ' + items.length;
-    $('#cleanup-queue').innerHTML = items.map(item => '<div class="queue-row" id="queue-' + item.id + '"><div class="queue-clip"><div class="queue-content"><div><strong>' + item.name + '</strong><small>' + item.path + '</small></div><span>' + sizeLabel(item.mb) + '</span></div></div></div>').join('');
     if (screen === 'quit') previousScreen = 'cleaning';
     else setScreen('cleaning');
     let removed = 0;
     let mb = 0;
     for (const item of items) {
-      await wait(390);
+      const row = $('#queue-' + item.id);
+      row.classList.add('current');
+      await wait(audible ? 600 : 800);
       if (current !== version) return;
       item.removed = true;
       removed++;
       mb += item.mb;
-      const row = $('#queue-' + item.id);
       row.classList.add('collapsed');
       row.inert = true;
       row.setAttribute('aria-hidden', 'true');
       $('#cleanup-count').textContent = removed + ' / ' + items.length;
       free += item.mb / 1000;
       updateSpace();
+      await wait(reducedMotion.matches ? 80 : motion.row + 120);
+      if (current !== version) return;
+      row.remove();
     }
-    await wait(reducedMotion.matches ? 0 : 180);
+    await wait(450);
     if (current !== version) return;
     busy = false;
     $('#result-title').textContent = items.length ? 'All clean' : 'Nothing to clean';
@@ -262,6 +290,7 @@ export function initDemo(cue) {
 
   function reset() {
     version++;
+    scrollGeneration++;
     busy = false;
     free = 74.7;
     selected = new Set(defaults);
@@ -301,6 +330,8 @@ export function initDemo(cue) {
     tourEnabled = false;
     tourVersion++;
     tourRunning = false;
+    scrollGeneration++;
+    $('#clean-button').classList.remove('tour-highlight');
     updateTourControl();
   }
 
@@ -309,18 +340,29 @@ export function initDemo(cue) {
     tourRunning = true;
     const current = ++tourVersion;
     const valid = () => current === tourVersion && tourEnabled && visible && !document.hidden;
-    await wait(2300);
+    await wait(3200);
+    if (!valid()) return;
+    await scrollToCategory('worktrees');
+    if (!valid()) return;
+    await wait(650);
     if (!valid()) return;
     selected.add('worktrees');
     syncSelection();
     await expandCategory('worktrees', true);
     if (!valid()) return;
-    scrollToCategory('worktrees');
-    await wait(2400);
+    await wait(motion.row);
     if (!valid()) return;
+    await scrollToCategory('worktrees');
+    if (!valid()) return;
+    await wait(3800);
+    if (!valid()) return;
+    $('#clean-button').classList.add('tour-highlight');
+    await wait(850);
+    if (!valid()) return;
+    $('#clean-button').classList.remove('tour-highlight');
     await clean(false);
     if (!valid()) return;
-    await wait(3400);
+    await wait(6000);
     if (!valid()) return;
     reset();
     tourRunning = false;

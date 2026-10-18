@@ -15,7 +15,7 @@ Open `http://127.0.0.1:4173`. Python 3 is the only requirement; no account, Node
 ## Contents
 
 - `dist/index.html`: minimal hero, install chooser, interactive product preview, and a footer wordmark with Nihal’s X link.
-- `dist/styles.css`: responsive layout, local fonts, 180 ms control and row-height transitions, reduced-motion support.
+- `dist/styles.css`: responsive layout, local fonts, responsive controls, 320 ms row-height transitions, and reduced-motion support.
 - `dist/app.js`: agent installation prompt, clipboard feedback/fallback, install chooser, and sound control.
 - `dist/demo.js`: synthetic app state, live metrics, category inventories, cleanup queue, and automatic walkthrough.
 - `dist/sounds.js`: gesture-triggered Web Audio playback of the native app’s Cuelume cues, at the same 70% volume.
@@ -25,7 +25,7 @@ Open `http://127.0.0.1:4173`. Python 3 is the only requirement; no account, Node
 
 Get xean expands into two choices. **Let your agent do it** copies a setup prompt and shows “Prompt copied”; if clipboard access fails, a selectable text field provides the prompt. **Do it yourself** opens the repository’s installation instructions.
 
-The browser preview mirrors the native cleaner’s 420 × 580 layout, categories, settings, scroll-edge blur, compact quit confirmation, and cleanup/result screens. It uses example paths and sizes and never reads, scans, or deletes visitor files. The silent walkthrough expands worktrees, clears entries with 180 ms height transitions, and shows the result while the numbers update. Interacting pauses the walkthrough; replay starts it again. Reduced Motion disables automatic playback and movement. Sound cues play only for user actions, with a mute control beside the preview.
+The browser preview mirrors the native cleaner’s 420 × 580 layout, categories, settings, scroll-edge blur, compact quit confirmation, and cleanup/result screens. It uses example paths and sizes and never reads, scans, or deletes visitor files. The silent walkthrough scrolls to worktrees over 850 ms, opens their details, and pauses for reading before cleaning. The checking screen keeps the selected queue visible; each active entry is highlighted before its 320 ms collapse, and numbers ease to their new values over 480 ms. The success screen stays visible for six seconds before the next cycle. Interacting interrupts the automatic scrolling; replay starts the walkthrough again. Reduced Motion disables automatic playback and movement. Sound cues play only for user actions, with a mute control beside the preview.
 
 No analytics, remote fonts, or browser storage are used. The preview is implemented in HTML/CSS; the installed app uses native SwiftUI and AppKit components.
 
