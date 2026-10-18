@@ -48,6 +48,7 @@ final class CleanerModel: ObservableObject {
   @Published private(set) var categoryScans: [CleanerCategory: CleanerScan] = [:]
   @Published private(set) var loadingCategory: CleanerCategory?
   @Published private(set) var removingItemID: String?
+  @Published private(set) var removedItemIDs: Set<String> = []
   @Published private(set) var itemFailures: [String: String] = [:]
   @Published private(set) var isBusy = false
   @Published private(set) var stopRequested = false
@@ -217,6 +218,7 @@ final class CleanerModel: ObservableObject {
   /// Closing the panel clears this presentation, never an in-flight cleanup.
   func panelClosed() {
     cleanup = nil
+    removedItemIDs = []
     if !isBusy { status = "" }
   }
 
@@ -244,10 +246,6 @@ final class CleanerModel: ObservableObject {
       result = CleanerOutcome(date: now(), removed: 0, kept: 0, bytes: 0, availableGain: 0)
     } else {
       result = await clean(report.items, requested: requested, automatic: false, runID: run.id)
-      // Let the final row finish collapsing before replacing the list with its result.
-      if cleanup?.id == run.id {
-        try? await Task.sleep(for: .milliseconds(180))
-      }
     }
     if cleanup?.id == run.id {
       cleanup?.result = result
@@ -321,6 +319,7 @@ final class CleanerModel: ObservableObject {
         let win = try await driver.remove(
           item, preferences: deletionPreferences, automatic: automatic)
         removed.insert(item.id)
+        if !automatic { removedItemIDs.insert(item.id) }
         if let runID, cleanup?.id == runID { cleanup?.removedIDs.insert(item.id) }
         bytes += win.bytes ?? 0
         func wasRemoved(_ path: String) -> Bool {

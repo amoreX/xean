@@ -18,9 +18,12 @@ popover, resized to 64 points of content, not a modal. Cancel or Escape restores
 and reopening starts in the normal cleaner. Clicking the icon again, clicking outside, Escape and ⌘W
 close the panel while disk checks and active cleanup continue; Quit exits.
 
-Keep custom animations at 180 ms with no bounce, text fades, text reveals or content scaling.
-Popover visibility uses a short whole-window fade. Disclosures and removed entries animate their
-clipped height, leaving text layout unchanged. Unmount closed controls after the collapse so they
+Keep ordinary control and disclosure animations at 180 ms with no bounce, text reveals or content
+scaling. Popover visibility uses a short whole-window fade. Disclosures animate their clipped height,
+leaving text layout unchanged. Confirmed removals use a red center-out background sweep (320 ms),
+a 120 ms hold, a short 18-point slide and fade (240 ms), then height collapse (280 ms). Present bulk
+removals one at a time without delaying filesystem operations; show the result after the last animation.
+Use the same removal treatment for an individual Delete and the website preview. Unmount closed controls after the collapse so they
 cannot retain keyboard focus or accessibility entries. Reduce Motion makes these changes immediate.
 Mouse-wheel steps ease over 180 ms; trackpads retain native momentum. Preserve the short scroll-edge
 blur and fade while keeping the header and footer fixed. Do not scale rows as they scroll. Increased

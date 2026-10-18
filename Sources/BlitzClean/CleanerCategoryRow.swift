@@ -4,7 +4,6 @@ struct CleanerCategoryRow: View {
   @ObservedObject var model: CleanerModel
   let category: CleanerCategory
   @State private var expanded = false
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -55,7 +54,7 @@ struct CleanerCategoryRow: View {
   private var inventory: some View {
     Group {
       if let report = model.categoryScans[category] {
-        inventoryRows(report).transition(.identity)
+        CleanerInventoryList(model: model, report: report).transition(.identity)
       } else {
         Text(model.stopRequested ? "Check stopped. Reopen to try again." : "Checking…")
           .font(BlitzType.caption)
@@ -64,23 +63,36 @@ struct CleanerCategoryRow: View {
     }
   }
 
-  private func inventoryRows(_ report: CleanerScan) -> some View {
-    let items = report.visibleItems
+}
+
+private struct CleanerInventoryList: View {
+  @ObservedObject var model: CleanerModel
+  let report: CleanerScan
+  @State private var items: [CleanerItem]
+
+  init(model: CleanerModel, report: CleanerScan) {
+    self.model = model
+    self.report = report
+    _items = State(initialValue: report.visibleItems)
+  }
+
+  var body: some View {
     let kept = report.visibleKept
     return VStack(alignment: .leading, spacing: 8) {
       if items.isEmpty && kept.isEmpty {
         Text("No items 50 MB or larger.").font(BlitzType.caption)
           .foregroundStyle(.secondary).cleanerScrollItem()
       }
-      VStack(alignment: .leading, spacing: 10) {
+      VStack(alignment: .leading, spacing: 0) {
         ForEach(items) { item in
-          CleanerInventoryItem(model: model, item: item).cleanerScrollItem()
-            .transition(
-              .asymmetric(
-                insertion: .identity,
-                removal: .modifier(
-                  active: CleanerRowCollapse(progress: 0), identity: CleanerRowCollapse(progress: 1)
-                )))
+          CleanerRemovalRow(
+            removed: !report.visibleItems.contains { $0.id == item.id }
+              && model.removedItemIDs.contains(item.id),
+            onFinished: { items.removeAll { $0.id == item.id } }
+          ) {
+            CleanerInventoryItem(model: model, item: item)
+              .padding(.vertical, 5).cleanerScrollItem()
+          }
         }
         ForEach(kept) { item in
           VStack(alignment: .leading, spacing: 3) {
@@ -91,12 +103,24 @@ struct CleanerCategoryRow: View {
             }
             Text(CleanerInventoryItem.shortPath(item.path)).lineLimit(2).truncationMode(.middle)
             Text(item.reason)
-          }.font(BlitzType.caption).foregroundStyle(.secondary).cleanerScrollItem()
+          }.font(BlitzType.caption).foregroundStyle(.secondary)
+            .padding(.vertical, 5).cleanerScrollItem()
         }
-      }.animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: items.map(\.id))
+      }
     }
+    .onChange(of: report.visibleItems.map(\.id)) { _, ids in
+      // Retain only confirmed removals long enough to animate; expired scans unmount this view.
+      items = items.filter { ids.contains($0.id) || model.removedItemIDs.contains($0.id) }
+      for item in report.visibleItems {
+        if let index = items.firstIndex(where: { $0.id == item.id }) {
+          items[index] = item
+        } else {
+          items.append(item)
+        }
+      }
+    }
+    .onChange(of: report.scannedAt) { _, _ in items = report.visibleItems }
   }
-
 }
 
 private struct CleanerCategoryIndicator: View {
@@ -154,7 +178,7 @@ struct CleanerDisclosureReveal<Content: View>: View {
   }
 }
 
-private struct CleanerDisclosureLayout: Layout {
+struct CleanerDisclosureLayout: Layout {
   var progress: CGFloat
   var animatableData: CGFloat {
     get { progress }
@@ -214,19 +238,5 @@ private struct CleanerInventoryItem: View {
 
   static func shortPath(_ path: String) -> String {
     path.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
-  }
-}
-
-private struct CleanerRowCollapse: ViewModifier, Animatable {
-  nonisolated var progress: CGFloat
-  nonisolated var animatableData: CGFloat {
-    get { progress }
-    set { progress = newValue }
-  }
-
-  func body(content: Content) -> some View {
-    CleanerDisclosureLayout(progress: progress) {
-      content.transaction { $0.animation = nil }
-    }.clipped()
   }
 }

@@ -4,9 +4,16 @@ struct CleanerCleanupView: View {
   @ObservedObject var model: CleanerModel
   let cleanup: CleanerCleanup
   var onClose: () -> Void
+  @Binding var presentedRemovals: Set<String>
+
+  private var nextRemoval: String? {
+    cleanup.items.first {
+      cleanup.removedIDs.contains($0.id) && !presentedRemovals.contains($0.id)
+    }?.id
+  }
 
   var body: some View {
-    if cleanup.phase == .finished, let result = cleanup.result {
+    if cleanup.phase == .finished, nextRemoval == nil, let result = cleanup.result {
       completion(result)
     } else {
       VStack(alignment: .leading, spacing: 0) {
@@ -15,16 +22,22 @@ struct CleanerCleanupView: View {
           Text(cleanup.phase == .scanning ? "Checking selected items…" : "Cleaning…")
             .font(.headline)
           Spacer()
-          if cleanup.phase == .removing {
-            Text("\(cleanup.removedIDs.count) / \(cleanup.items.count)")
+          if cleanup.phase != .scanning {
+            Text("\(presentedRemovals.count) / \(cleanup.items.count)")
               .foregroundStyle(.secondary).monospacedDigit()
           }
         }.padding(.horizontal, 18).padding(.vertical, 16)
         ScrollView {
           VStack(spacing: 0) {
             ForEach(cleanup.items) { item in
-              CleanerDisclosureReveal(expanded: !cleanup.removedIDs.contains(item.id)) {
-                itemRow(item).padding(.vertical, 10).cleanerScrollItem()
+              if !presentedRemovals.contains(item.id) {
+                CleanerRemovalRow(
+                  removed: nextRemoval == item.id,
+                  onFinished: { presentedRemovals.insert(item.id) }
+                ) {
+                  itemRow(item).padding(.horizontal, 8).padding(.vertical, 10)
+                    .cleanerScrollItem()
+                }
               }
             }
           }.padding(.horizontal, 18).padding(.vertical, 18)

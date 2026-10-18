@@ -35,30 +35,70 @@ struct CleanerRenderTests {
     await model.cleanSelected()
     try await render(
       view, size: .init(width: 420, height: 592),
-      to: directory.appendingPathComponent("cleaner-completed.png"))
+      to: directory.appendingPathComponent("cleaner-completed.png"), settle: 2_400)
     try await render(
       view, size: .init(width: 380, height: 500),
-      to: directory.appendingPathComponent("cleaner-completed-compact.png"))
+      to: directory.appendingPathComponent("cleaner-completed-compact.png"), settle: 2_400)
     try await Task.sleep(for: .milliseconds(5_400))
     #expect(model.status.isEmpty)
     try await render(
       view, size: .init(width: 420, height: 592),
-      to: directory.appendingPathComponent("cleaner-completed-dismissed.png"))
+      to: directory.appendingPathComponent("cleaner-completed-dismissed.png"), settle: 2_400)
   }
 
-  private func render(_ view: some View, size: CGSize, to url: URL) async throws {
-    let host = NSHostingView(rootView: view.frame(width: size.width, height: size.height))
+  @Test func rendersSequentialRemovalWhenRequested() async throws {
+    guard let output = ProcessInfo.processInfo.environment["BLITZCLEAN_DESIGN_DIR"] else { return }
+    let directory = URL(fileURLWithPath: output)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let defaults = try #require(UserDefaults(suiteName: "cleaner-removal-render-\(UUID())"))
+    let fixture = try CleanerFixture()
+    defer { fixture.remove() }
+    let driver = FixtureCleanerDriver()
+    await driver.setScanPaths(["/Example/agent-auth/.next", "/Example/agent-settings/node_modules"])
+    let model = CleanerModel(
+      defaults: defaults, driver: driver,
+      history: .init(url: URL(fileURLWithPath: fixture.path + "/history.json")))
+    let view = CleanerView(
+      model: model, launchAtLogin: LaunchAtLoginController(),
+      menuBarStats: CleanerMenuBarStats(defaults: defaults))
+    let host = NSHostingView(
+      rootView: view.frame(width: 420, height: 580).background(Color(nsColor: .windowBackgroundColor)))
+    host.frame = NSRect(x: 0, y: 0, width: 420, height: 580)
+    let window = NSWindow(
+      contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.appearance = NSAppearance(named: .aqua)
+    window.contentView = host
+    window.orderFrontRegardless()
+    defer { window.orderOut(nil) }
+    try await Task.sleep(for: .milliseconds(300))
+    await model.cleanSelected()
+    // The fake driver has already finished. Presentation must drain one row at a time.
+    #expect(await driver.removals.count == 2)
+    for (delay, name) in [(300, "first"), (960, "second"), (1_100, "finished")] {
+      try await Task.sleep(for: .milliseconds(delay))
+      try snapshot(host, to: directory.appendingPathComponent("cleaner-removal-\(name).png"))
+    }
+  }
+
+  private func render(_ view: some View, size: CGSize, to url: URL, settle: Int = 300) async throws {
+    let host = NSHostingView(
+      rootView: view.frame(width: size.width, height: size.height)
+        .background(Color(nsColor: .windowBackgroundColor)))
     host.frame = NSRect(origin: .zero, size: size)
     let window = NSWindow(
       contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
     window.appearance = NSAppearance(named: .aqua)
     window.contentView = host
     window.orderFrontRegardless()
-    try await Task.sleep(for: .milliseconds(300))
+    try await Task.sleep(for: .milliseconds(settle))
+    try snapshot(host, to: url)
+    window.orderOut(nil)
+  }
+
+  private func snapshot(_ host: NSView, to url: URL) throws {
     host.layoutSubtreeIfNeeded()
     let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
     host.cacheDisplay(in: host.bounds, to: bitmap)
-    window.orderOut(nil)
     try #require(bitmap.representation(using: .png, properties: [:])).write(to: url)
   }
 }

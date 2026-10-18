@@ -20,7 +20,7 @@ const icon = name => '<svg class="icon" aria-hidden="true"><use href="#' + name 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const sizeLabel = mb => mb >= 1000 ? (mb / 1000).toFixed(1).replace(/\.0$/, '') + ' GB' : mb + ' MB';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const motion = { row: 320, value: 480, view: 240, scroll: 850 };
+const motion = { row: 320, value: 480, view: 280, scroll: 950, sweep: 440, depart: 240, collapse: 280 };
 const easeInOut = progress => progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
 
 export function initDemo(cue) {
@@ -205,6 +205,24 @@ export function initDemo(cue) {
     feedbackTimer = setTimeout(() => { $('#demo-status').textContent = ''; }, 5000);
   }
 
+  async function removeRow(row, current) {
+    row.inert = true;
+    row.setAttribute('aria-hidden', 'true');
+    if (!reducedMotion.matches) {
+      row.classList.add('removing');
+      await wait(motion.sweep);
+      if (current !== version) return false;
+      row.classList.add('departing');
+      await wait(motion.depart);
+      if (current !== version) return false;
+      row.classList.add('collapsed');
+      await wait(motion.collapse);
+      if (current !== version) return false;
+    }
+    row.remove();
+    return true;
+  }
+
   async function deleteItem(id) {
     if (busy) return;
     const item = categories.flatMap(category => category.items).find(candidate => candidate.id === id);
@@ -217,14 +235,10 @@ export function initDemo(cue) {
     row.querySelector('button').disabled = true;
     await wait(220);
     if (current !== version) return;
-    row.classList.add('collapsed');
-    row.inert = true;
     item.removed = true;
     free += item.mb / 1000;
     updateSpace();
-    await wait(reducedMotion.matches ? 0 : motion.row);
-    if (current !== version) return;
-    row.remove();
+    if (!await removeRow(row, current)) return;
     const category = categories.find(category => category.items.includes(item));
     if (category.items.every(item => item.removed)) renderInventory(category);
     busy = false;
@@ -240,7 +254,13 @@ export function initDemo(cue) {
     const items = active.filter(item => !item.protected);
     const protectedCount = active.length - items.length;
     busy = true;
-    if (audible) cue('tap');
+    if (audible) {
+      cue('tap');
+      $('#clean-button').classList.add('tour-pressed');
+      await wait(reducedMotion.matches ? 0 : 180);
+      $('#clean-button').classList.remove('tour-pressed');
+      if (current !== version) return;
+    }
     $('#cleanup-title').textContent = 'Checking selected items…';
     $('#cleanup-count').textContent = items.length + (items.length === 1 ? ' item' : ' items');
     $('#cleanup-queue').innerHTML = items.map(item => '<div class="queue-row" id="queue-' + item.id + '"><div class="queue-clip"><div class="queue-content"><div><strong>' + item.name + '</strong><small>' + item.path + '</small></div><span>' + sizeLabel(item.mb) + '</span></div></div></div>').join('');
@@ -262,15 +282,12 @@ export function initDemo(cue) {
       item.removed = true;
       removed++;
       mb += item.mb;
-      row.classList.add('collapsed');
-      row.inert = true;
-      row.setAttribute('aria-hidden', 'true');
       $('#cleanup-count').textContent = removed + ' / ' + items.length;
       free += item.mb / 1000;
       updateSpace();
-      await wait(reducedMotion.matches ? 80 : motion.row + 120);
+      if (!await removeRow(row, current)) return;
+      await wait(reducedMotion.matches ? 0 : 120);
       if (current !== version) return;
-      row.remove();
     }
     await wait(450);
     if (current !== version) return;
@@ -331,8 +348,22 @@ export function initDemo(cue) {
     tourVersion++;
     tourRunning = false;
     scrollGeneration++;
-    $('#clean-button').classList.remove('tour-highlight');
+    document.querySelectorAll('.tour-highlight, .tour-pressed').forEach(control => control.classList.remove('tour-highlight', 'tour-pressed'));
     updateTourControl();
+  }
+
+  async function demonstrateClick(control, valid, activate) {
+    control.classList.add('tour-highlight');
+    await wait(650);
+    if (!valid()) return false;
+    control.classList.add('tour-pressed');
+    await wait(220);
+    if (!valid()) return false;
+    await activate();
+    control.classList.remove('tour-pressed');
+    await wait(420);
+    control.classList.remove('tour-highlight');
+    return valid();
   }
 
   async function runTour() {
@@ -346,20 +377,21 @@ export function initDemo(cue) {
     if (!valid()) return;
     await wait(650);
     if (!valid()) return;
-    selected.add('worktrees');
-    syncSelection();
-    await expandCategory('worktrees', true);
+    const worktreeRow = $('#category-worktrees');
+    if (!await demonstrateClick(worktreeRow.querySelector('.category-select'), valid, () => {
+      selected.add('worktrees');
+      syncSelection();
+    })) return;
+    await wait(600);
     if (!valid()) return;
+    if (!await demonstrateClick(worktreeRow.querySelector('.category-trigger'), valid, () => expandCategory('worktrees', true))) return;
     await wait(motion.row);
     if (!valid()) return;
     await scrollToCategory('worktrees');
     if (!valid()) return;
     await wait(3800);
     if (!valid()) return;
-    $('#clean-button').classList.add('tour-highlight');
-    await wait(850);
-    if (!valid()) return;
-    $('#clean-button').classList.remove('tour-highlight');
+    if (!await demonstrateClick($('#clean-button'), valid, () => {})) return;
     await clean(false);
     if (!valid()) return;
     await wait(6000);
