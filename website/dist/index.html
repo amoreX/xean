@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f7f2">
-  <meta name="description" content="Agents pile up worktrees faster than you can keep track of. One button to clear all the space out.">
+  <meta name="description" content="Agents pile up worktrees faster than you can keep track of. One button to automatically clear all that space out.">
   <meta property="og:title" content="xean — A little more room.">
   <meta property="og:description" content="A native macOS menu bar cleaner for worktrees, developer caches, and build files.">
   <meta property="og:type" content="website">
@@ -17,6 +17,10 @@
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <symbol id="eraser" viewBox="0 0 24 24"><path d="m14 3 7 7a2 2 0 0 1 0 3l-7 7H7l-4-4a2 2 0 0 1 0-3l9-10a1.5 1.5 0 0 1 2 0Z"/><path d="m7.5 8 9 9M7 20h14"/></symbol>
+    <symbol id="folder" viewBox="0 0 24 24"><path d="M2 7V5a2 2 0 0 1 2-2h5l3 3h8a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2Z"/></symbol>
+    <symbol id="wifi" viewBox="0 0 24 24"><path d="M2 8a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0m-11 4a6 6 0 0 1 8 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></symbol>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></symbol>
+    <symbol id="apple" viewBox="0 0 24 24"><path d="M15.6 5.3c1-1.2 1.7-2.8 1.5-4.3-1.5.1-3.2 1-4.2 2.2-.9 1-1.7 2.6-1.5 4.1 1.6.1 3.1-.8 4.2-2ZM20.5 16.9c-.6 1.5-.9 2.1-1.7 3.4-1.2 1.8-2.8 4-4.8 3-1.8-.8-2.5-.9-4.4 0-1.8.8-3.3-1.2-4.5-2.9C1.7 15.7 2.1 9.5 6.2 7.5c1.8-.9 3.5-.6 5.1.1 1.3.6 2.1.6 3.6 0 2-.8 4.2-.6 5.7 1.3-3.8 2.3-3.1 6.8-.1 8Z" fill="currentColor" stroke="none"/></symbol>
     <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
     <symbol id="chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
     <symbol id="copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></symbol>
@@ -37,8 +41,8 @@
   <main id="main" class="shell">
     <div class="hero-grid">
       <section class="intro" aria-labelledby="intro-title">
-        <h1 id="intro-title">Agents pile up worktrees faster than you can keep track of.</h1>
-        <p class="intro-description">One button to clear all the space out.</p>
+        <h1 id="intro-title"><span>Agents pile up worktrees</span> <span>faster than you can keep</span> <span>track of.</span></h1>
+        <p class="intro-description">One button to automatically clear all that space out.</p>
         <div class="intro-actions">
           <div class="install-shell glass" id="install-shell">
             <button class="get-trigger" id="get-xean" type="button" aria-expanded="false" aria-controls="install-options">Get xean <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></button>
@@ -54,49 +58,65 @@
         <noscript><p class="no-script"><a href="https://github.com/amoreX/xean#get-started">Get xean on GitHub</a></p></noscript>
       </section>
       <section class="demo" aria-label="Interactive xean app preview, using example data">
-        <div class="demo-stage">
-          <div class="menu-bar">
-            <div class="menu-stats" id="menu-stats" aria-hidden="true">
-              <span id="cpu-stat"><svg class="icon"><use href="#cpu"/></svg><span id="menu-cpu">18%</span></span>
-              <span id="memory-stat"><svg class="icon"><use href="#memory"/></svg><span id="menu-memory">8 GB free</span></span>
-              <span id="disk-stat"><svg class="icon"><use href="#disk"/></svg><span id="menu-free">75 GB</span></span>
-            </div>
-            <button type="button" class="menu-eraser" id="open-preview" aria-label="Close xean preview"><svg class="icon" aria-hidden="true"><use href="#eraser"/></svg></button>
-          </div>
-          <div class="cleaner" id="cleaner" data-screen="settings">
-            <div class="quit-view" id="quit-view" hidden><strong>Quit xean?</strong><button class="app-button" data-action="cancel-quit">Cancel</button><button class="app-button prominent" data-action="quit">Quit</button></div>
-            <div class="app-view" id="app-view">
-              <header class="cleaner-header"><span class="app-wordmark">xean</span><span id="low-warning" class="low-warning" aria-label="Low disk space" hidden>!</span><span class="free-space" id="free-space">74.7 GB free</span><button class="power-button" type="button" aria-label="Quit xean preview" data-action="request-quit"><svg class="icon" aria-hidden="true"><use href="#power"/></svg></button></header>
-              <div id="settings-view" class="settings-view">
-                <div class="scroll-viewport"><div class="app-scroll" id="app-scroll" tabindex="0" aria-label="Cleaner settings">
-                  <div class="threshold-settings">
-                    <div class="setting-row" id="automatic-row"><label for="auto-clean">Auto-clean</label><input class="number-field" id="auto-limit" aria-label="Auto-clean free-space limit" inputmode="numeric" type="number" min="1" max="1000" value="20"><span>GB</span><input class="switch" id="auto-clean" type="checkbox" role="switch"></div>
-                    <div class="setting-row auto-confirm" id="auto-confirm" hidden><span>Enable auto-clean?</span><button class="app-button" data-action="cancel-auto">Cancel</button><button class="app-button prominent" data-action="confirm-auto">OK</button></div>
-                    <div class="setting-row"><label for="notify-low">Notify when low</label><input class="number-field" id="warning-limit" aria-label="Free-space limit" inputmode="numeric" type="number" min="1" max="1000" value="20"><span>GB</span><input class="switch" id="notify-low" type="checkbox" role="switch"></div>
+        <div class="demo-stage" id="demo-stage">
+          <div class="desktop-viewport" id="desktop-viewport">
+            <div class="desktop-scene" id="desktop-scene">
+              <div class="desktop-wallpaper" aria-hidden="true"><i></i><i></i><i></i></div>
+              <div class="desktop-menu" aria-hidden="true">
+                <div class="mac-menu-left"><svg class="icon"><use href="#apple"/></svg><strong>Finder</strong><span>File</span><span>Edit</span><span>View</span><span>Go</span><span>Window</span><span>Help</span></div>
+                <div class="mac-menu-right"><svg class="icon"><use href="#wifi"/></svg><svg class="icon"><use href="#search"/></svg><span>Sun 9:41</span></div>
+              </div>
+              <div class="finder-window" aria-hidden="true">
+                <div class="finder-sidebar"><div class="traffic-lights"><i></i><i></i><i></i></div><small>Favorites</small><span>Recents</span><span>Applications</span><span>Desktop</span><span class="selected">Projects</span><small>Locations</small><span>Macintosh HD</span></div>
+                <div class="finder-main"><div class="finder-toolbar"><span>‹ &nbsp; ›</span><strong>Worktrees</strong><svg class="icon"><use href="#search"/></svg></div><div class="finder-files"><div><svg class="icon"><use href="#folder"/></svg><span>studio-auth</span></div><div><svg class="icon"><use href="#folder"/></svg><span>studio-settings</span></div><div><svg class="icon"><use href="#folder"/></svg><span>studio-api</span></div></div><div class="finder-status">3 folders</div></div>
+              </div>
+              <div class="desktop-dock" aria-hidden="true"><span class="dock-finder">⌣</span><span class="dock-browser"><svg class="icon"><use href="#search"/></svg></span><span class="dock-terminal">›_</span><span class="dock-notes"></span><span class="dock-settings">⚙</span><i></i><span class="dock-trash">▤</span></div>
+              <svg class="desktop-cursor" id="desktop-cursor" viewBox="0 0 28 32" aria-hidden="true"><path d="M3 2v23l6-6 5 10 5-2-5-10h9Z" fill="#252b28" stroke="white" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              <div class="menu-bar">
+                <div class="menu-stats" id="menu-stats" aria-hidden="true">
+                  <span id="cpu-stat"><svg class="icon"><use href="#cpu"/></svg><span id="menu-cpu">18%</span></span>
+                  <span id="memory-stat"><svg class="icon"><use href="#memory"/></svg><span id="menu-memory">8 GB free</span></span>
+                  <span id="disk-stat"><svg class="icon"><use href="#disk"/></svg><span id="menu-free">75 GB</span></span>
+                </div>
+                <button type="button" class="menu-eraser" id="open-preview" aria-label="Open xean preview"><svg class="icon" aria-hidden="true"><use href="#eraser"/></svg></button>
+              </div>
+              <div class="cleaner" id="cleaner" data-screen="closed">
+                <div class="quit-view" id="quit-view" hidden><strong>Quit xean?</strong><button class="app-button" data-action="cancel-quit">Cancel</button><button class="app-button prominent" data-action="quit">Quit</button></div>
+                <div class="app-view" id="app-view">
+                  <header class="cleaner-header"><span class="app-wordmark">xean</span><span id="low-warning" class="low-warning" aria-label="Low disk space" hidden>!</span><span class="free-space" id="free-space">74.7 GB free</span><button class="power-button" type="button" aria-label="Quit xean preview" data-action="request-quit"><svg class="icon" aria-hidden="true"><use href="#power"/></svg></button></header>
+                  <div id="settings-view" class="settings-view">
+                    <div class="scroll-viewport"><div class="app-scroll" id="app-scroll" tabindex="0" aria-label="Cleaner settings">
+                      <div class="threshold-settings">
+                        <div class="setting-row" id="automatic-row"><label for="auto-clean">Auto-clean</label><input class="number-field" id="auto-limit" aria-label="Auto-clean free-space limit" inputmode="numeric" type="number" min="1" max="1000" value="20"><span>GB</span><input class="switch" id="auto-clean" type="checkbox" role="switch"></div>
+                        <div class="setting-row auto-confirm" id="auto-confirm" hidden><span>Enable auto-clean?</span><button class="app-button" data-action="cancel-auto">Cancel</button><button class="app-button prominent" data-action="confirm-auto">OK</button></div>
+                        <div class="setting-row"><label for="notify-low">Notify when low</label><input class="number-field" id="warning-limit" aria-label="Free-space limit" inputmode="numeric" type="number" min="1" max="1000" value="20"><span>GB</span><input class="switch" id="notify-low" type="checkbox" role="switch"></div>
+                      </div>
+                      <section class="categories"><h2>What to clean</h2><div id="category-list"></div><div class="worktree-age" id="worktree-age" hidden><div class="setting-row"><label for="worktree-days">Keep worktrees used in the last</label><input id="worktree-days" class="number-field" type="number" min="1" max="365" value="30"><span>days</span></div><p>Age includes file changes and Git activity. Primary, detached, locked, unmerged and dirty worktrees stay.</p></div></section>
+                      <section class="app-settings" aria-label="Menu bar settings">
+                        <div class="setting-row"><label for="show-stats">Show menu bar stats</label><input id="show-stats" class="switch" type="checkbox" role="switch" checked></div>
+                        <div class="disclosure expanded" id="stats-options"><div class="disclosure-clip"><div class="stats-options-inner">
+                          <div class="setting-row"><label for="show-cpu">CPU</label><input id="show-cpu" class="switch metric-toggle" type="checkbox" role="switch" checked></div>
+                          <div class="setting-row"><label for="show-memory">Memory</label><input id="show-memory" class="switch metric-toggle" type="checkbox" role="switch" checked></div>
+                          <div class="segments" role="group" aria-label="Memory value" id="memory-format"><button type="button" aria-pressed="true" data-format="available">Available GB</button><button type="button" aria-pressed="false" data-format="used">Used GB</button><button type="button" aria-pressed="false" data-format="percent">Used %</button></div>
+                          <div class="setting-row"><label for="show-disk">Disk free</label><input id="show-disk" class="switch metric-toggle" type="checkbox" role="switch" checked></div>
+                        </div></div></div>
+                        <div class="setting-row"><label for="start-login">Start at login</label><input id="start-login" class="switch" type="checkbox" role="switch"></div>
+                      </section>
+                    </div></div>
+                    <footer class="cleaner-footer"><span id="demo-status" role="status" aria-live="polite"></span><button id="clean-button" class="app-button prominent" type="button">Clean</button></footer>
                   </div>
-                  <section class="categories"><h2>What to clean</h2><div id="category-list"></div><div class="worktree-age" id="worktree-age" hidden><div class="setting-row"><label for="worktree-days">Keep worktrees used in the last</label><input id="worktree-days" class="number-field" type="number" min="1" max="365" value="30"><span>days</span></div><p>Age includes file changes and Git activity. Primary, detached, locked, unmerged and dirty worktrees stay.</p></div></section>
-                  <section class="app-settings" aria-label="Menu bar settings">
-                    <div class="setting-row"><label for="show-stats">Show menu bar stats</label><input id="show-stats" class="switch" type="checkbox" role="switch" checked></div>
-                    <div class="disclosure expanded" id="stats-options"><div class="disclosure-clip"><div class="stats-options-inner">
-                      <div class="setting-row"><label for="show-cpu">CPU</label><input id="show-cpu" class="switch metric-toggle" type="checkbox" role="switch" checked></div>
-                      <div class="setting-row"><label for="show-memory">Memory</label><input id="show-memory" class="switch metric-toggle" type="checkbox" role="switch" checked></div>
-                      <div class="segments" role="group" aria-label="Memory value" id="memory-format"><button type="button" aria-pressed="true" data-format="available">Available GB</button><button type="button" aria-pressed="false" data-format="used">Used GB</button><button type="button" aria-pressed="false" data-format="percent">Used %</button></div>
-                      <div class="setting-row"><label for="show-disk">Disk free</label><input id="show-disk" class="switch metric-toggle" type="checkbox" role="switch" checked></div>
-                    </div></div></div>
-                    <div class="setting-row"><label for="start-login">Start at login</label><input id="start-login" class="switch" type="checkbox" role="switch"></div>
-                  </section>
-                </div></div>
-                <footer class="cleaner-footer"><span id="demo-status" role="status" aria-live="polite"></span><button id="clean-button" class="app-button prominent" type="button">Clean</button></footer>
+                  <div class="cleanup-view" id="cleanup-view" hidden>
+                    <div class="cleanup-heading"><span class="spinner" aria-hidden="true"></span><strong id="cleanup-title">Checking selected items…</strong><span id="cleanup-count"></span></div>
+                    <div class="scroll-viewport"><div class="cleanup-queue app-scroll" id="cleanup-queue"></div></div>
+                  </div>
+                  <div class="result-view" id="result-view" hidden><div class="result-content"><span class="result-icon"><svg class="icon" aria-hidden="true"><use href="#check"/></svg></span><h2 id="result-title">All clean</h2><p class="result-bytes" id="result-bytes"></p><p id="result-count"></p><p id="result-kept"></p></div><footer class="cleaner-footer"><button class="app-button prominent" type="button" data-action="done">Done</button></footer></div>
+                </div>
               </div>
-              <div class="cleanup-view" id="cleanup-view" hidden>
-                <div class="cleanup-heading"><span class="spinner" aria-hidden="true"></span><strong id="cleanup-title">Checking selected items…</strong><span id="cleanup-count"></span></div>
-                <div class="scroll-viewport"><div class="cleanup-queue app-scroll" id="cleanup-queue"></div></div>
-              </div>
-              <div class="result-view" id="result-view" hidden><div class="result-content"><span class="result-icon"><svg class="icon" aria-hidden="true"><use href="#check"/></svg></span><h2 id="result-title">All clean</h2><p class="result-bytes" id="result-bytes"></p><p id="result-count"></p><p id="result-kept"></p></div><footer class="cleaner-footer"><button class="app-button prominent" type="button" data-action="done">Done</button></footer></div>
             </div>
           </div>
+          <button class="desktop-hint" id="desktop-hint" type="button">Right in your Mac’s menu bar <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></button>
         </div>
-        <div class="demo-caption"><span>Interactive preview · example data</span><div class="demo-tools"><button type="button" id="tour-toggle" aria-label="Pause demo" title="Pause demo"><svg class="icon" aria-hidden="true"><use href="#pause"/></svg></button><button type="button" id="replay-demo" aria-label="Replay demo" title="Replay demo"><svg class="icon" aria-hidden="true"><use href="#replay"/></svg></button><button type="button" id="sound-toggle" aria-label="Mute sounds" title="Mute sounds" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#sound"/></svg></button></div></div>
+        <div class="demo-caption"><span>macOS simulation · example data</span><div class="demo-tools"><button type="button" id="tour-toggle" aria-label="Pause demo" title="Pause demo"><svg class="icon" aria-hidden="true"><use href="#pause"/></svg></button><button type="button" id="replay-demo" aria-label="Replay demo" title="Replay demo"><svg class="icon" aria-hidden="true"><use href="#replay"/></svg></button><button type="button" id="sound-toggle" aria-label="Mute sounds" title="Mute sounds" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#sound"/></svg></button></div></div>
         <p id="demo-announcement" class="sr-only" role="status" aria-live="polite"></p>
       </section>
     </div>

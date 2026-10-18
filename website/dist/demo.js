@@ -20,7 +20,7 @@ const icon = name => '<svg class="icon" aria-hidden="true"><use href="#' + name 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const sizeLabel = mb => mb >= 1000 ? (mb / 1000).toFixed(1).replace(/\.0$/, '') + ' GB' : mb + ' MB';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const motion = { row: 320, value: 480, view: 280, scroll: 950, sweep: 440, depart: 240, collapse: 280 };
+const motion = { row: 320, value: 480, view: 280, scroll: 950, sweep: 440, depart: 240, collapse: 280, zoom: 1000 };
 const easeInOut = progress => progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
 
 export function initDemo(cue) {
@@ -39,9 +39,29 @@ export function initDemo(cue) {
   let memoryMode = 'available';
   let feedbackTimer;
   let scrollGeneration = 0;
+  let desktopWidth = 0;
   const panel = $('#cleaner');
+  const stage = $('#demo-stage');
+  const cursor = $('#desktop-cursor');
   const scroller = $('#app-scroll');
   const numberAnimations = new Map();
+
+  function fitDesktop() {
+    const width = stage.clientWidth;
+    if (width === desktopWidth) return;
+    desktopWidth = width;
+    const focusedWidth = Math.min(440, width);
+    stage.style.setProperty('--desktop-height', width * 563 / 900 + 'px');
+    stage.style.setProperty('--desktop-scale', width / 900);
+    stage.style.setProperty('--focus-width', focusedWidth + 'px');
+    stage.style.setProperty('--panel-width', focusedWidth - 20 + 'px');
+    stage.style.setProperty('--camera-x', focusedWidth / 2 - 650 + 'px');
+  }
+
+  function focusDesktop(focused) {
+    stage.classList.toggle('focused', focused);
+    $('#desktop-hint').hidden = focused;
+  }
 
   function animateValue(element, target, format, initial = target) {
     const prior = numberAnimations.get(element);
@@ -109,6 +129,7 @@ export function initDemo(cue) {
     }
     $('#open-preview').setAttribute('aria-label', next === 'closed' ? 'Open xean preview' : 'Close xean preview');
     if (next === 'closed') {
+      focusDesktop(false);
       $('#automatic-row').hidden = false;
       $('#auto-confirm').hidden = true;
       $('#demo-announcement').textContent = '';
@@ -333,7 +354,8 @@ export function initDemo(cue) {
     syncSelection();
     renderMetrics();
     updateSpace();
-    setScreen('settings');
+    cursor.classList.remove('visible', 'at-menu');
+    setScreen('closed');
     scroller.scrollTop = 0;
   }
 
@@ -348,6 +370,7 @@ export function initDemo(cue) {
     tourVersion++;
     tourRunning = false;
     scrollGeneration++;
+    cursor.classList.remove('visible');
     document.querySelectorAll('.tour-highlight, .tour-pressed').forEach(control => control.classList.remove('tour-highlight', 'tour-pressed'));
     updateTourControl();
   }
@@ -371,7 +394,20 @@ export function initDemo(cue) {
     tourRunning = true;
     const current = ++tourVersion;
     const valid = () => current === tourVersion && tourEnabled && visible && !document.hidden;
-    await wait(3200);
+    await wait(1800);
+    if (!valid()) return;
+    cursor.classList.add('visible');
+    await wait(350);
+    if (!valid()) return;
+    cursor.classList.add('at-menu');
+    await wait(1000);
+    if (!valid()) return;
+    if (!await demonstrateClick($('#open-preview'), valid, () => setScreen('settings'))) return;
+    await wait(550);
+    if (!valid()) return;
+    cursor.classList.remove('visible');
+    focusDesktop(true);
+    await wait(motion.zoom + 1800);
     if (!valid()) return;
     await scrollToCategory('worktrees');
     if (!valid()) return;
@@ -401,8 +437,8 @@ export function initDemo(cue) {
     runTour();
   }
 
-  panel.addEventListener('pointerdown', pauseTour);
-  panel.addEventListener('focusin', pauseTour);
+  panel.addEventListener('pointerdown', () => { pauseTour(); focusDesktop(true); });
+  panel.addEventListener('focusin', () => { pauseTour(); focusDesktop(true); });
   panel.addEventListener('keydown', event => {
     pauseTour();
     if (event.key === 'Escape' && screen === 'quit') {
@@ -478,15 +514,21 @@ export function initDemo(cue) {
   }));
   $('#start-login').addEventListener('change', () => cue('toggle'));
   $('#clean-button').addEventListener('click', () => clean());
-  $('#open-preview').addEventListener('click', () => {
+  function togglePreview() {
     pauseTour();
     if (screen === 'closed') {
       categories.forEach(category => { category.loaded = true; });
       renderCategories();
       syncSelection();
       setScreen('settings');
+      focusDesktop(true);
       scroller.scrollTop = 0;
     } else { version++; busy = false; setScreen('closed'); }
+  }
+  $('#open-preview').addEventListener('click', togglePreview);
+  $('#desktop-hint').addEventListener('click', () => {
+    togglePreview();
+    $('#open-preview').focus({ preventScroll: true });
   });
   $('#tour-toggle').addEventListener('click', () => {
     cue('tap');
@@ -502,7 +544,7 @@ export function initDemo(cue) {
     runTour();
   });
   function updateVisibility() {
-    const bounds = panel.getBoundingClientRect();
+    const bounds = stage.getBoundingClientRect();
     const next = bounds.bottom > 0 && bounds.top < window.innerHeight;
     if (next === visible) return;
     visible = next;
@@ -518,6 +560,9 @@ export function initDemo(cue) {
     if (!document.hidden && tourEnabled && visible) { reset(); runTour(); }
   });
   reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) pauseTour(); });
+  fitDesktop();
+  new ResizeObserver(fitDesktop).observe(stage);
+  requestAnimationFrame(() => requestAnimationFrame(() => stage.classList.add('ready')));
   reset();
   updateTourControl();
   updateVisibility();
