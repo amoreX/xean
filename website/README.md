@@ -16,13 +16,15 @@ Open `http://127.0.0.1:4173`. Python 3 is the only requirement; no account, Node
 
 Live site: [xean-ivory.vercel.app](https://xean-ivory.vercel.app).
 
-From the repository root, after signing in with `npx vercel login`:
+The Vercel project `xean` is connected to [amoreX/xean](https://github.com/amoreX/xean). Pushes to `codex/blitzclean` automatically deploy to production. Other branches create preview deployments.
+
+To publish changes from the production branch:
 
 ```sh
-npx vercel --cwd website --project xean --prod
+git push fork codex/blitzclean
 ```
 
-The Vercel project root is `website`. Its configuration serves `dist/` directly with no installation or build command. Local project links in `.vercel/` stay out of Git, and `.vercelignore` excludes the old local Sites metadata from uploads. The production URL is public; browser audio autoplay permissions still apply separately for each visitor.
+The Vercel project root is `website`, the output directory is `dist`, and the framework preset is Other. There is no installation or build command. Local project links in `.vercel/` stay out of Git, and `.vercelignore` excludes the old local Sites metadata from CLI uploads. The production URL is public; browser audio autoplay permissions still apply separately for each visitor.
 
 ## Contents
 
