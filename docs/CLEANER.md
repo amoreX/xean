@@ -99,8 +99,9 @@ and used percentage. At least one metric remains selected
 while enabled. Metrics sample every two seconds; switching them off stops this sampler.
 
 Stats sit to the left of the eraser, which remains the popover anchor. AppKit supplies the translucent
-background, border, pointer, and shadow. SwiftUI controls follow system appearance; native Liquid Glass
-buttons are used on macOS 26+, with standard bordered fallbacks on earlier supported systems.
+white background, border, pointer, and shadow. The panel and its native SwiftUI controls stay light,
+including when macOS is dark, and respect increased contrast. Native Liquid Glass buttons are used on
+macOS 26+, with standard bordered fallbacks on earlier supported systems.
 
 Custom motion takes 180 ms. Disclosures and removed rows animate clipped height without text fades or
 scaling. The scroll-edge blur and fade remain; Reduce Motion disables custom motion/blur, and Increase

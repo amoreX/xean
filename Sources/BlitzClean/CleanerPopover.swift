@@ -24,7 +24,9 @@ final class CleanerPopover: NSPopover {
       let anchor = CleanerPresentationAnchor(screenRect: screenRect)
       presentationAnchor = anchor
       anchor.orderFront(nil)
-      appearance = NSApp.effectiveAppearance
+      appearance = NSAppearance(
+        named: NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+          ? .accessibilityHighContrastAqua : .aqua)
       show(
         relativeTo: anchor.positioningView.bounds, of: anchor.positioningView,
         preferredEdge: .minY)

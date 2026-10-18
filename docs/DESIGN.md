@@ -3,9 +3,10 @@
 xean is a single-panel menu bar cleaner. These rules describe the active product; inherited dashboard
 components are retained for compatibility, not a reference for new cleaner UI.
 
-Use AppKit's native `NSPopover` for its translucent gray material, border, pointer, shadow and
-screen-edge placement. Do not layer a custom material, outline or shape over its background. Follow
-the system appearance, including accessibility preferences. Content is 420 × 580 points, shortened
+Use AppKit's native `NSPopover` with the light Aqua appearance for its translucent white material,
+border, pointer, shadow and screen-edge placement. Do not layer a custom material, outline or shape
+over its background. Keep the panel light even when macOS is dark; honor increased contrast with
+the corresponding high-contrast Aqua appearance. Content is 420 × 580 points, shortened
 on smaller screens. Use native SwiftUI switches, checkboxes, text fields and segmented
 pickers. Primary and secondary actions use native glass button styles on macOS 26 or newer, with
 standard bordered styles on earlier systems. Do not add custom tints, button outlines or shadow clips.

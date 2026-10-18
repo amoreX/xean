@@ -93,7 +93,7 @@ editable beside their switches. [The user guide](docs/CLEANER.md) covers timing,
 
 AppKit owns the popover's translucent background, border, pointer, and shadow. SwiftUI supplies native
 switches, checkboxes, numeric fields, and segmented controls. On macOS 26+, actions use native Liquid Glass
-button styles. The panel follows the system's light or dark appearance.
+button styles. The panel uses a light, translucent white appearance, including when macOS is dark.
 
 The header and Clean button stay fixed while content scrolls through a soft edge blur. Custom transitions
 take 180 ms: disclosures and removed entries animate their height without moving or revealing individual
