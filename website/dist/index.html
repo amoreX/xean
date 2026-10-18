@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f2">
+  <meta name="description" content="A small macOS menu bar cleaner for developer caches, build files, and old worktrees. Native, local, and open source.">
+  <meta property="og:title" content="xean — A little more room.">
+  <meta property="og:description" content="Agents pile up worktrees faster than you can keep track of. One button to clear all the space out.">
+  <meta property="og:type" content="website">
+  <title>xean — A little more room.</title>
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="preload" href="./assets/fonts/manrope-regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="eraser" viewBox="0 0 24 24"><path d="m14 3 7 7a2 2 0 0 1 0 3l-7 7H7l-4-4a2 2 0 0 1 0-3l9-10a1.5 1.5 0 0 1 2 0Z"/><path d="m7.5 8 9 9M7 20h14"/></symbol>
+    <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 1v4m6-4v4M9 19v4m6-4v4M1 9h4m-4 6h4M19 9h4m-4 6h4"/><path d="M9 9h6v6H9z"/></symbol>
+    <symbol id="memory" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="13" rx="2"/><path d="M6 9v5m4-5v5m4-5v5m4-5v5M6 18v3m4-3v3m4-3v3m4-3v3"/></symbol>
+    <symbol id="disk" viewBox="0 0 24 24"><path d="m3 14 3-9h12l3 9"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M16 17h2"/></symbol>
+    <symbol id="power" viewBox="0 0 24 24"><path d="M12 2v10M6.3 5a9 9 0 1 0 11.4 0"/></symbol>
+  </svg>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <main id="main" class="shell">
+    <div class="hero-grid">
+      <section class="intro" aria-labelledby="intro-title">
+        <h1 id="intro-title">Agents pile up worktrees faster than you can keep track of.</h1>
+        <p class="intro-description">One button to clear all the space out.</p>
+        <div class="intro-actions"><a class="button primary" href="https://github.com/amoreX/xean#get-started">Get xean <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a><a class="github-link" href="https://github.com/amoreX/xean" aria-label="xean on GitHub"><img src="./assets/github.svg" width="23" height="23" alt=""></a></div>
+      </section>
+
+      <section class="demo" aria-label="Interactive xean preview with example data">
+        <div class="menu-bar" aria-hidden="true">
+          <div class="menu-stats" id="menu-stats"><span><svg class="icon"><use href="#cpu"/></svg>18%</span><span><svg class="icon"><use href="#memory"/></svg>8 GB free</span><span><svg class="icon"><use href="#disk"/></svg><span id="menu-free">24 GB</span></span></div>
+          <span class="menu-eraser"><svg class="icon"><use href="#eraser"/></svg></span>
+        </div>
+        <div class="cleaner" id="cleaner">
+          <header class="cleaner-header"><span class="app-wordmark">xean</span><span class="free-space" id="free-space">23.8 GB free</span><svg class="icon power-icon" aria-hidden="true"><use href="#power"/></svg></header>
+          <div class="cleaner-body">
+            <div id="selection-view">
+              <div class="section-label"><h2>What to clean</h2><span id="selection-total">12.3 GB selected</span></div>
+              <div class="cache-list" id="cache-list">
+                <div class="cache-row" data-size="2100"><div class="cache-clip"><label><input type="checkbox" checked><span class="cache-copy"><strong>Claude Code</strong><span>CLI and app caches</span></span><span class="cache-size">2.1 GB</span></label></div></div>
+                <div class="cache-row" data-size="840"><div class="cache-clip"><label><input type="checkbox" checked><span class="cache-copy"><strong>Codex</strong><span>Desktop caches; sessions stay</span></span><span class="cache-size">840 MB</span></label></div></div>
+                <div class="cache-row" data-size="1400"><div class="cache-clip"><label><input type="checkbox" checked><span class="cache-copy"><strong>Coding editors</strong><span>Cursor, VS Code, Windsurf and Zed</span></span><span class="cache-size">1.4 GB</span></label></div></div>
+                <div class="cache-row" data-size="3200"><div class="cache-clip"><label><input type="checkbox" checked><span class="cache-copy"><strong>Package caches</strong><span>npm, Yarn, pip, uv, Bun and Homebrew</span></span><span class="cache-size">3.2 GB</span></label></div></div>
+                <div class="cache-row" data-size="4800"><div class="cache-clip"><label><input type="checkbox" checked><span class="cache-copy"><strong>Build files</strong><span>Xcode, Swift, Rust and web builds</span></span><span class="cache-size">4.8 GB</span></label></div></div>
+                <div class="cache-row" data-size="6400"><div class="cache-clip"><label><input type="checkbox"><span class="cache-copy"><strong>Old worktrees</strong><span>Clean, merged, inactive checkouts</span></span><span class="cache-size">6.4 GB</span></label></div></div>
+              </div>
+            </div>
+            <div id="success-view" class="success-view" hidden>
+              <span class="success-icon"><svg class="icon" aria-hidden="true"><use href="#check"/></svg></span>
+              <p class="success-kicker">A LITTLE ROOM TO BREATHE</p>
+              <h2><span id="removed-total">12.3</span> <span>GB cleared.</span></h2>
+              <p id="success-description">The leftovers are gone. Your work stays yours.</p>
+              <button class="text-link" id="reset-demo" type="button">Try it again <span aria-hidden="true">↻</span></button>
+            </div>
+            <div class="stats-setting"><label for="show-stats">Show menu bar stats</label><input id="show-stats" class="switch" type="checkbox" role="switch" checked></div>
+          </div>
+          <footer class="cleaner-footer"><span id="demo-status" role="status" aria-live="polite">Your choice. One click.</span><button id="clean-button" type="button" class="button clean-button">Clean</button></footer>
+        </div>
+        <p class="demo-caption"><span class="caption-line"></span> Go on, give it a clean. <span>Just a demo — no files touched.</span></p>
+        <noscript><p class="demo-noscript">Enable JavaScript to try the interactive preview.</p></noscript>
+      </section>
+    </div>
+
+  </main>
+
+  <footer class="brand-footer shell"><p>xean</p></footer>
+</body>
+</html>

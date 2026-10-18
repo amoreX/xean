@@ -140,6 +140,18 @@ Test deletion only against disposable fixtures. See [Contributing](CONTRIBUTING.
 formatting, and changes to cleanup policy. [Releasing](docs/RELEASING.md) covers local packaging and the
 remaining work for independent xean releases.
 
+## Website
+
+The one-page website is in [`website/dist`](website/dist), alongside the app source. To run it locally:
+
+```sh
+./start-site.sh
+```
+
+Open **http://127.0.0.1:4173**. The launcher requires Python 3 and serves only on localhost. Keep it running
+while previewing; press Ctrl+C to stop. No package install or build step is needed. See the
+[website guide](website/README.md) for another port or static hosting.
+
 ## Documentation
 
 | Guide | Contents |
@@ -152,6 +164,7 @@ remaining work for independent xean releases.
 | [Performance](docs/PERFORMANCE.md) | Scan caching, traversal, sampling, and validation |
 | [Changelog](CHANGELOG.md) | xean changes and the upstream release history |
 | [Roadmap](docs/ROADMAP.md) | Follow-up work, separate from implemented features |
+| [Website](website/README.md) | One-page landing site, local preview, and static hosting |
 
 ## Credits and license
 
