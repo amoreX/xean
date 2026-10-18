@@ -232,7 +232,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .result-content .result-bytes { font-size: 17px; font-weight: 500; color: #252725; }
 .result-content p { color: #656b61; font-size: 13px; line-height: 1.45; }
 #result-kept { font-size: 11px; }
-.demo-caption { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 12px; font-size: 9px; color: var(--muted); }
+.demo-caption { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 12px; font-size: 9px; color: var(--muted); }
 .demo-tools { display: flex; align-items: center; gap: 3px; }
 .demo-tools button { display: grid; place-items: center; width: 29px; height: 29px; padding: 6px; border: 0; border-radius: 50%; background: transparent; transition: transform 180ms var(--ease), background 180ms; }
 .demo-tools button:hover { background: #e4ebe0; }
