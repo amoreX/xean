@@ -4,7 +4,8 @@ xean is a single-panel menu bar cleaner. These rules describe the active product
 components are retained for compatibility, not a reference for new cleaner UI.
 
 Use AppKit's native `NSPopover` with the light Aqua appearance. On macOS 26+, set its native glass
-backdrop to the clear style with a 24% white tint for a neutral, translucent surface. Keep content at
+backdrop to the regular frosted style with a 12% white tint for a neutral, translucent surface that
+diffuses background details. Keep content at
 full opacity and leave the glass inside hosted controls untouched. AppKit owns the material, border,
 pointer, shadow and screen-edge placement; do not layer a custom material, outline or shape over it.
 Keep the panel light even when macOS is dark. Reduce Transparency and increased contrast restore

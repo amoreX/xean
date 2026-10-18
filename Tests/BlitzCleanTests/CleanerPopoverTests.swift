@@ -6,7 +6,7 @@ import Testing
 
 @MainActor
 struct CleanerPopoverTests {
-  @Test func clearBackdropPreservesContentGlassAndFullWindowOpacity() async throws {
+  @Test func frostedBackdropPreservesContentGlassAndFullWindowOpacity() async throws {
     guard #available(macOS 26.0, *) else { return }
     let source = NSWindow(
       contentRect: NSRect(x: 200, y: 200, width: 500, height: 400),
@@ -37,10 +37,11 @@ struct CleanerPopoverTests {
         return view.subviews.flatMap { backdrops(in: $0) }
       }
       let glass = try #require(backdrops(in: frame).first)
-      let clear =
+      let tinted =
         !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
         && !NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
-      #expect(glass.style == (clear ? .clear : .regular))
+      #expect(glass.style == .regular)
+      #expect(glass.tintColor == (tinted ? NSColor.white.withAlphaComponent(0.12) : nil))
       #expect(controlGlass.style == .regular)
       #expect(controlGlass.tintColor == .systemBlue)
       #expect(controlGlass.alphaValue == 1)

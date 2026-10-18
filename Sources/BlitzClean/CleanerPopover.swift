@@ -88,7 +88,7 @@ final class CleanerPopover: NSPopover {
     guard #available(macOS 26.0, *), let content = contentViewController?.view,
       let frame = window?.contentView?.superview
     else { return }
-    let clear =
+    let tinted =
       !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
       && !NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
 
@@ -97,8 +97,8 @@ final class CleanerPopover: NSPopover {
     func configure(_ view: NSView) {
       guard view !== content else { return }
       if let glass = view as? NSGlassEffectView {
-        glass.style = clear ? .clear : .regular
-        glass.tintColor = clear ? .white.withAlphaComponent(0.24) : nil
+        glass.style = .regular
+        glass.tintColor = tinted ? .white.withAlphaComponent(0.12) : nil
         return
       }
       view.subviews.forEach(configure)

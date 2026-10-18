@@ -138,10 +138,10 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .power-button:active { transform: scale(.9); }
 .settings-view, .cleanup-view, .result-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .scroll-viewport { position: relative; flex: 1; min-height: 0; overflow: hidden; }
-.scroll-viewport::before, .scroll-viewport::after { content: ''; position: absolute; left: 0; right: 0; height: 16px; z-index: 2; pointer-events: none; background: #f4f5f21f; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
-.scroll-viewport::before { top: 0; mask-image: linear-gradient(#000,transparent); }
-.scroll-viewport::after { bottom: 0; mask-image: linear-gradient(transparent,#000); }
-.app-scroll { position: relative; height: 100%; overflow-y: auto; overflow-x: hidden; padding: 16px 17px 8px; scrollbar-width: none; overscroll-behavior: contain; overflow-anchor: none; }
+.scroll-viewport::before, .scroll-viewport::after { content: ''; position: absolute; left: 0; right: 0; height: 16px; z-index: 2; pointer-events: none; background: transparent; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.scroll-viewport::before { top: 0; mask-image: linear-gradient(transparent,#000 30%,transparent); }
+.scroll-viewport::after { bottom: 0; mask-image: linear-gradient(transparent,#000 70%,transparent); }
+.app-scroll { mask-image: linear-gradient(transparent,#000 16px,#000 calc(100% - 16px),transparent); position: relative; height: 100%; overflow-y: auto; overflow-x: hidden; padding: 16px 17px 8px; scrollbar-width: none; overscroll-behavior: contain; overflow-anchor: none; }
 .app-scroll::-webkit-scrollbar { display: none; }
 .setting-row { display: flex; align-items: center; gap: 8px; min-height: 34px; font-size: 12px; }
 .setting-row > label, .auto-confirm > span { flex: 1; cursor: pointer; }
@@ -327,5 +327,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 }
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  .cleaner, .cleaner::before, .scroll-viewport::before, .scroll-viewport::after { background: #f4f5f2; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .cleaner, .cleaner::before { background: #f4f5f2; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .scroll-viewport::before, .scroll-viewport::after { display: none; }
+  .app-scroll { mask-image: none; }
 }
