@@ -11,8 +11,8 @@
   <title>xean — A little more room.</title>
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
   <link rel="preload" href="./assets/fonts/manrope-regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="./styles.css?v=20261019-page-arrival-2">
-  <script src="./app.js?v=20261019-persistent-cursor" type="module"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261019-popover-cleanup">
+  <script src="./app.js?v=20261019-popover-cleanup" type="module"></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -81,6 +81,7 @@
                 <button type="button" class="menu-eraser" id="open-preview" aria-label="Open xean preview"><svg class="icon" aria-hidden="true"><use href="#eraser"/></svg></button>
               </div>
               <div class="cleaner" id="cleaner" data-screen="closed">
+                <svg class="popover-outline" aria-hidden="true"><defs><path id="popover-shape"/><clipPath id="popover-clip"><use href="#popover-shape"/></clipPath></defs><use href="#popover-shape"/></svg>
                 <div class="quit-view" id="quit-view" hidden><strong>Quit xean?</strong><button class="app-button" data-action="cancel-quit">Cancel</button><button class="app-button prominent" data-action="quit">Quit</button></div>
                 <div class="app-view" id="app-view">
                   <header class="cleaner-header"><span class="app-wordmark">xean</span><span id="low-warning" class="low-warning" aria-label="Low disk space" hidden>!</span><span class="free-space" id="free-space">4.7 GB free</span><button class="power-button" type="button" aria-label="Quit xean preview" data-action="request-quit"><svg class="icon" aria-hidden="true"><use href="#power"/></svg></button></header>

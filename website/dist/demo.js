@@ -21,7 +21,8 @@ const icon = name => '<svg class="icon" aria-hidden="true"><use href="#' + name 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const sizeLabel = mb => mb >= 1000 ? (mb / 1000).toFixed(1).replace(/\.0$/, '') + ' GB' : mb + ' MB';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const motion = { row: 240, value: 400, view: 220, scroll: 650, pointer: 440, sweep: 240, depart: 140, collapse: 160, zoom: 800 };
+const cleanupSpeed = 2.5;
+const motion = { row: 240, value: 400, view: 220, scroll: 650, pointer: 440, sweep: 240 / cleanupSpeed, depart: 140 / cleanupSpeed, collapse: 160 / cleanupSpeed, zoom: 800 };
 const easeInOut = progress => progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
 
 export function initDemo(cue) {
@@ -48,6 +49,24 @@ export function initDemo(cue) {
   const notifications = [...document.querySelectorAll('.storage-notification')];
   const scroller = $('#app-scroll');
   const numberAnimations = new Map();
+  panel.style.setProperty('--cleanup-speed', cleanupSpeed);
+
+  function fitPopover() {
+    const width = panel.offsetWidth;
+    const height = panel.offsetHeight + 12;
+    const center = width / 2;
+    // One outline and glass surface, including the rounded menu-bar notch.
+    $('#popover-shape').setAttribute('d', [
+      `M 20.5 12.5 H ${center - 20}`,
+      `C ${center - 12} 12.5 ${center - 9} 8 ${center - 3} 2`,
+      `Q ${center} -1 ${center + 3} 2`,
+      `C ${center + 9} 8 ${center + 12} 12.5 ${center + 20} 12.5`,
+      `H ${width - 20.5} Q ${width - .5} 12.5 ${width - .5} 32.5`,
+      `V ${height - 20.5} Q ${width - .5} ${height - .5} ${width - 20.5} ${height - .5}`,
+      `H 20.5 Q .5 ${height - .5} .5 ${height - 20.5}`,
+      'V 32.5 Q .5 12.5 20.5 12.5 Z'
+    ].join(' '));
+  }
 
   function fitDesktop() {
     const width = stage.clientWidth;
@@ -77,8 +96,9 @@ export function initDemo(cue) {
     const state = { value: from, frame: 0 };
     numberAnimations.set(element, state);
     const start = performance.now();
+    const duration = busy ? motion.value / cleanupSpeed : motion.value;
     function step(now) {
-      const progress = reducedMotion.matches || document.hidden ? 1 : Math.min(1, (now - start) / motion.value);
+      const progress = reducedMotion.matches || document.hidden ? 1 : Math.min(1, (now - start) / duration);
       state.value = from + (target - from) * (1 - Math.pow(1 - progress, 3));
       element.textContent = format(state.value);
       if (progress < 1) state.frame = requestAnimationFrame(step);
@@ -310,7 +330,7 @@ export function initDemo(cue) {
     $('#cleanup-queue').innerHTML = items.map(item => '<div class="queue-row" id="queue-' + item.id + '"><div class="queue-clip"><div class="queue-content"><div><strong>' + item.name + '</strong><small>' + item.path + '</small></div><span>' + sizeLabel(item.mb) + '</span></div></div></div>').join('');
     $('#cleanup-queue').scrollTop = 0;
     setScreen('scanning');
-    await wait(reducedMotion.matches ? 0 : 500);
+    await wait(reducedMotion.matches ? 0 : 500 / cleanupSpeed);
     if (current !== version) return;
     $('#cleanup-title').textContent = 'Cleaning…';
     $('#cleanup-count').textContent = '0 / ' + items.length;
@@ -321,7 +341,7 @@ export function initDemo(cue) {
     for (const item of items) {
       const row = $('#queue-' + item.id);
       row.classList.add('current');
-      await wait(reducedMotion.matches ? 0 : 120);
+      await wait(reducedMotion.matches ? 0 : 120 / cleanupSpeed);
       if (current !== version) return;
       item.removed = true;
       removed++;
@@ -331,7 +351,7 @@ export function initDemo(cue) {
       updateSpace();
       if (!await removeRow(row, current)) return;
     }
-    await wait(reducedMotion.matches ? 0 : 180);
+    await wait(reducedMotion.matches ? 0 : 180 / cleanupSpeed);
     if (current !== version) return;
     busy = false;
     $('#result-title').textContent = items.length ? 'All clean' : 'Nothing to clean';
@@ -628,6 +648,8 @@ export function initDemo(cue) {
   reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) pauseTour(); });
   fitDesktop();
   new ResizeObserver(fitDesktop).observe(stage);
+  fitPopover();
+  new ResizeObserver(fitPopover).observe(panel);
   requestAnimationFrame(() => requestAnimationFrame(() => stage.classList.add('ready')));
   reset();
   updateVisibility();

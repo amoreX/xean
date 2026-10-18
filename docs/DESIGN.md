@@ -33,7 +33,9 @@ leaving text layout unchanged. Confirmed removals use a red center-out backgroun
 a 120 ms hold, a short 18-point slide and fade (240 ms), then height collapse (280 ms). Present bulk
 removals one at a time without delaying filesystem operations; show the result after the last animation.
 Use the same removal treatment for an individual Delete and the website preview. The website runs this
-faster: 200 ms sweep, 40 ms hold, 140 ms departure and 160 ms collapse, with a 120 ms per-item lead-in.
+faster: 80 ms sweep, 16 ms hold, 56 ms departure and 64 ms collapse, with a 48 ms per-item lead-in.
+The website popover has one continuous curved outline and glass surface, including the rounded notch
+beneath the menu bar icon; keep its notch and body joined while the panel resizes.
 Unmount closed controls after the collapse so they
 cannot retain keyboard focus or accessibility entries. Reduce Motion makes these changes immediate.
 Mouse-wheel steps ease over 180 ms; trackpads retain native momentum. Preserve the short scroll-edge

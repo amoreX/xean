@@ -48,7 +48,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .copy-fallback textarea { display: block; width: 100%; margin-top: 8px; padding: 10px; border: 1px solid #bbccc0; border-radius: 9px; color: var(--ink); background: #fff9; resize: vertical; line-height: 1.5; }
 .no-script { margin-top: 12px; font-size: 12px; text-decoration: underline; }
 .demo { min-width: 0; width: 560px; max-width: 100%; justify-self: end; }
-.demo-stage { position: relative; height: var(--focus-height); --focus-height: 544px; --panel-height: calc(var(--focus-height) - 44px); --desktop-width: 560px; --desktop-height: 350px; --desktop-scale: .622222; --focus-width: 440px; --panel-width: 420px; --camera-x: -430px; }
+.demo-stage { position: relative; height: var(--focus-height); --focus-height: 544px; --panel-height: calc(var(--focus-height) - 48px); --desktop-width: 560px; --desktop-height: 350px; --desktop-scale: .622222; --focus-width: 440px; --panel-width: 420px; --camera-x: -430px; }
 .desktop-viewport { position: absolute; left: 50%; top: calc((var(--focus-height) - var(--desktop-height)) / 2); width: 100%; height: var(--desktop-height); transform: translateX(-50%); overflow: clip; border-radius: 16px; box-shadow: 0 16px 45px -18px #183f3945, 0 0 0 1px #183f3915; background: #c4d7c5; transition: width 800ms cubic-bezier(.4,0,.2,1), height 800ms cubic-bezier(.4,0,.2,1), top 800ms cubic-bezier(.4,0,.2,1), border-radius 800ms; }
 .desktop-scene { position: absolute; width: 900px; height: 563px; transform-origin: top left; transform: translateX(0) scale(var(--desktop-scale)); transition: transform 800ms cubic-bezier(.4,0,.2,1); font-family: -apple-system,BlinkMacSystemFont,system-ui,sans-serif; }
 .demo-stage.focused .desktop-viewport { top: 0; width: var(--focus-width); height: var(--focus-height); border-radius: 22px; }
@@ -107,7 +107,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .desktop-cursor.pressed::before { opacity: 1; transform: scale(1); }
 .desktop-cursor.pressed svg { transform: scale(.86); }
 .desktop-scene .menu-bar { position: absolute; z-index: 5; left: calc(650px - var(--panel-width) / 2); top: 0; width: var(--panel-width); margin: 0; }
-.desktop-scene .cleaner { position: absolute; z-index: 4; left: calc(650px - var(--panel-width) / 2); top: 36px; width: var(--panel-width); }
+.desktop-scene .cleaner { position: absolute; z-index: 4; left: calc(650px - var(--panel-width) / 2); top: 40px; width: var(--panel-width); }
 .desktop-scene .menu-eraser.tour-highlight { background: #183f3922; box-shadow: 0 0 0 5px #ffffff80; }
 .menu-bar { position: relative; height: 28px; margin-bottom: 16px; font-family: -apple-system,BlinkMacSystemFont,system-ui,sans-serif; font-size: 11px; font-weight: 600; color: #586e60; }
 .menu-stats { position: absolute; right: calc(50% + 19px); height: 28px; display: flex; align-items: center; gap: 10px; overflow: clip; transition: opacity 180ms; font-variant-numeric: tabular-nums; }
@@ -118,8 +118,10 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .menu-eraser:hover { background: #183f3910; }
 .menu-eraser .icon { width: 16px; height: 16px; }
 .menu-eraser.has-warning::after { content: '!'; position: absolute; top: -2px; right: -5px; color: #e43737; font-size: 12px; font-weight: 800; }
-.cleaner { position: relative; width: 100%; height: var(--panel-height); color: #252725; color-scheme: light; border: 1px solid #ffffffd9; border-radius: 20px; background: #f4f5f23d; backdrop-filter: blur(24px) saturate(1.15); -webkit-backdrop-filter: blur(24px) saturate(1.15); box-shadow: 0 12px 30px -14px #17291d50, 0 1px 4px #17291d24, inset 0 1px 0 #ffffff15; font-family: -apple-system,BlinkMacSystemFont,system-ui,sans-serif; font-size: 13px; transition: height 180ms var(--ease), opacity 180ms; }
-.cleaner::before { content: ''; position: absolute; left: calc(50% - 7px); top: -7px; width: 13px; height: 13px; transform: rotate(45deg); border-radius: 3px 0 0; background: #f4f5f25c; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-top: 1px solid #ffffffd9; border-left: 1px solid #ffffffd9; }
+.cleaner { position: relative; width: 100%; height: var(--panel-height); color: #252725; color-scheme: light; border: 1px solid transparent; border-radius: 20px; box-shadow: 0 12px 30px -14px #17291d50, 0 1px 4px #17291d24; font-family: -apple-system,BlinkMacSystemFont,system-ui,sans-serif; font-size: 13px; transition: height 180ms var(--ease), opacity 180ms; }
+.cleaner::before { content: ''; position: absolute; z-index: -1; inset: -13px -1px -1px; clip-path: url(#popover-clip); background: #f4f5f23d; backdrop-filter: blur(24px) saturate(1.15); -webkit-backdrop-filter: blur(24px) saturate(1.15); }
+.popover-outline { position: absolute; left: -1px; top: -13px; width: calc(100% + 2px); height: calc(100% + 14px); overflow: visible; pointer-events: none; }
+.popover-outline > use { fill: none; stroke: #ffffffa6; stroke-width: 1; }
 .cleaner[data-screen="quit"] { height: 64px; }
 .cleaner[data-screen="closed"] { visibility: hidden; opacity: 0; }
 .cleaner :focus-visible { outline-color: #007aff; outline-offset: 2px; }
@@ -168,7 +170,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .disclosure, .inventory-row, .queue-row { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 240ms cubic-bezier(.4,0,.2,1); }
 .disclosure.expanded, .inventory-row, .queue-row { grid-template-rows: 1fr; }
 .inventory-row.collapsed, .queue-row.collapsed { grid-template-rows: 0fr; }
-.inventory-row, .queue-row { transition-duration: 160ms; }
+.inventory-row, .queue-row { transition-duration: calc(160ms / var(--cleanup-speed,1)); }
 .disclosure-clip, .inventory-clip, .queue-clip { min-height: 0; overflow: hidden; overflow: clip; }
 .inventory { padding: 0 0 7px 27px; overflow: hidden; overflow: clip; }
 .inventory-line { position: relative; isolation: isolate; border-radius: 8px; display: flex; gap: 10px; padding: 5px 0; font-size: 12px; line-height: 17px; }
@@ -212,9 +214,9 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .cleanup-queue { padding-top: 4px; padding-bottom: 16px; }
 .queue-content { position: relative; isolation: isolate; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 8px; min-height: 60px; border-radius: 8px; transition: background 240ms ease-out, opacity 240ms ease-out; }
 .queue-row.current .queue-content { background: #0a84ff0b; }
-.inventory-line::before, .queue-content::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: #ff3b3029; transform: scaleX(0); transform-origin: center; transition: transform 200ms ease-in-out; }
+.inventory-line::before, .queue-content::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: #ff3b3029; transform: scaleX(0); transform-origin: center; transition: transform calc(200ms / var(--cleanup-speed,1)) ease-in-out; }
 .removing .inventory-line::before, .removing .queue-content::before { transform: scaleX(1); }
-.inventory-line, .queue-content { transition: transform 140ms ease-out, opacity 140ms ease-out, background 140ms ease-out; }
+.inventory-line, .queue-content { transition: transform calc(140ms / var(--cleanup-speed,1)) ease-out, opacity calc(140ms / var(--cleanup-speed,1)) ease-out, background calc(140ms / var(--cleanup-speed,1)) ease-out; }
 .departing .inventory-line, .departing .queue-content { transform: translateX(18px); opacity: 0; }
 .cleaner[data-screen="scanning"] .queue-content { opacity: .82; }
 .queue-content > div { min-width: 0; }
@@ -324,11 +326,13 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 @media (forced-colors: active) {
   .switch, .category-select { appearance: auto; }
   .switch::after, .category-select::after { display: none; }
-  .cleaner, .install-shell { border: 1px solid CanvasText; }
+  .install-shell { border: 1px solid CanvasText; }
+  .cleaner::before { background: Canvas; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .popover-outline > use { stroke: CanvasText; }
 }
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  .cleaner, .cleaner::before { background: #f4f5f2; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .cleaner::before { background: #f4f5f2; backdrop-filter: none; -webkit-backdrop-filter: none; }
   .app-scroll { mask-image: none; }
 }
 
