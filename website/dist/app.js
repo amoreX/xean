@@ -1,82 +1,66 @@
-const rows = [...document.querySelectorAll('.cache-row')];
-const cleanButton = document.querySelector('#clean-button');
-const selectionView = document.querySelector('#selection-view');
-const successView = document.querySelector('#success-view');
-const totalLabel = document.querySelector('#selection-total');
-const status = document.querySelector('#demo-status');
-const statsSwitch = document.querySelector('#show-stats');
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-let cleaning = false;
-let completed = false;
+import { cue, setMuted } from './sounds.js';
+import { initDemo } from './demo.js';
 
-const selectedRows = () => rows.filter(row => row.querySelector('input').checked);
-const sizeOf = row => Number(row.dataset.size);
-const gigabytes = size => (size / 1000).toFixed(1);
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const installPrompt = [
+  'Help me install and launch xean, the native macOS menu bar cleaner, from https://github.com/amoreX/xean.',
+  'Check that I am on macOS 14 or newer and have full Xcode 26 or newer selected with xcode-select. If a prerequisite is missing, tell me what to install before continuing.',
+  'Clone the repository into an appropriate development folder, or reuse an existing checkout without overwriting local changes. Read its AGENTS.md and README.md, then run ./start.sh from the repository root to build and launch the app. If an existing build needs updating, have me quit xean before running ./start.sh --build.',
+  'Verify that the menu bar app opens. Do not enable auto-clean or delete any of my files as part of setup.'
+].join('\n\n');
+const shell = document.querySelector('#install-shell');
+const trigger = document.querySelector('#get-xean');
+const options = document.querySelector('#install-options');
+const copyButton = document.querySelector('#agent-install');
+let copyReset;
 
-function updateSelection() {
-  const selected = selectedRows();
-  totalLabel.textContent = `${gigabytes(selected.reduce((sum, row) => sum + sizeOf(row), 0))} GB selected`;
-  cleanButton.disabled = selected.length === 0;
-  status.textContent = selected.length ? 'Your choice. One click.' : 'Choose something to clean.';
+function expandInstall(expanded) {
+  shell.classList.toggle('expanded', expanded);
+  trigger.setAttribute('aria-expanded', String(expanded));
+  options.inert = !expanded;
 }
-
-function updateFreeSpace(removed = 0) {
-  const free = 23.8 + removed / 1000;
-  document.querySelector('#free-space').textContent = `${free.toFixed(1)} GB free`;
-  document.querySelector('#menu-free').textContent = `${Math.round(free)} GB`;
-}
-
-rows.forEach(row => row.querySelector('input').addEventListener('change', updateSelection));
-statsSwitch.addEventListener('change', () => {
-  document.querySelector('#menu-stats').hidden = !statsSwitch.checked;
+trigger.addEventListener('click', () => {
+  cue('tap');
+  expandInstall(trigger.getAttribute('aria-expanded') !== 'true');
 });
-
-cleanButton.addEventListener('click', async () => {
-  if (cleaning || completed) return;
-  const selected = selectedRows();
-  if (!selected.length) return;
-  cleaning = true;
-  cleanButton.disabled = true;
-  cleanButton.textContent = 'Cleaning…';
-  rows.forEach(row => { row.querySelector('input').disabled = true; });
-  let removed = 0;
-  status.textContent = 'Clearing the example files…';
-  for (const row of selected) {
-    await wait(reducedMotion.matches ? 0 : 230);
-    row.classList.add('is-cleared');
-    row.inert = true;
-    removed += sizeOf(row);
-    updateFreeSpace(removed);
+shell.addEventListener('keydown', event => {
+  if (event.key === 'Escape') { expandInstall(false); trigger.focus(); cue('tap'); }
+});
+document.addEventListener('pointerdown', event => {
+  if (!shell.contains(event.target) && !document.querySelector('#copy-fallback').contains(event.target)) expandInstall(false);
+});
+copyButton.addEventListener('click', async () => {
+  cue('select');
+  clearTimeout(copyReset);
+  try {
+    await navigator.clipboard.writeText(installPrompt);
+    document.querySelector('#agent-label').textContent = 'Prompt copied';
+    copyButton.querySelector('use').setAttribute('href', '#check');
+    document.querySelector('#install-status').textContent = 'Prompt copied. Paste it into your coding agent.';
+    document.querySelector('#copy-fallback').hidden = true;
+    cue('success');
+    copyReset = setTimeout(() => {
+      document.querySelector('#agent-label').textContent = 'Let your agent do it';
+      copyButton.querySelector('use').setAttribute('href', '#copy');
+    }, 5000);
+  } catch {
+    cue('error');
+    document.querySelector('#copy-fallback').hidden = false;
+    const fallback = document.querySelector('#manual-prompt');
+    fallback.value = installPrompt;
+    fallback.focus();
+    fallback.select();
+    document.querySelector('#install-status').textContent = 'Clipboard unavailable. Copy the prompt from the text field.';
   }
-  await wait(reducedMotion.matches ? 0 : 180);
-  document.querySelector('#removed-total').textContent = gigabytes(removed);
-  document.querySelector('#success-description').textContent = `${selected.length} example ${selected.length === 1 ? 'category' : 'categories'} cleared. A little more breathing room.`;
-  selectionView.hidden = true;
-  successView.hidden = false;
-  cleanButton.hidden = true;
-  status.textContent = 'Demo complete. Your Mac’s files haven’t changed.';
-  cleaning = false;
-  completed = true;
-  document.querySelector('#reset-demo').focus({ preventScroll: true });
 });
-
-document.querySelector('#reset-demo').addEventListener('click', () => {
-  rows.forEach((row, index) => {
-    row.classList.remove('is-cleared');
-    row.inert = false;
-    const checkbox = row.querySelector('input');
-    checkbox.disabled = false;
-    checkbox.checked = index < 5;
-  });
-  selectionView.hidden = false;
-  successView.hidden = true;
-  cleanButton.hidden = false;
-  cleanButton.textContent = 'Clean';
-  completed = false;
-  updateFreeSpace();
-  updateSelection();
-  cleanButton.focus({ preventScroll: true });
+document.querySelectorAll('[data-sound]').forEach(link => link.addEventListener('click', () => cue(link.dataset.sound)));
+const muteButton = document.querySelector('#sound-toggle');
+muteButton.addEventListener('click', () => {
+  const muted = muteButton.getAttribute('aria-pressed') !== 'true';
+  setMuted(muted);
+  muteButton.setAttribute('aria-pressed', String(muted));
+  muteButton.setAttribute('aria-label', muted ? 'Enable sounds' : 'Mute sounds');
+  muteButton.title = muted ? 'Enable sounds' : 'Mute sounds';
+  muteButton.querySelector('use').setAttribute('href', muted ? '#mute' : '#sound');
+  if (!muted) cue('toggle');
 });
-
-updateSelection();
+initDemo(cue);
