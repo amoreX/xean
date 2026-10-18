@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f6f7f2">
+  <style>
+    html { background: #f6f7f2; color-scheme: light; }
+    html:not([data-ready]) body { visibility: hidden; opacity: 0; pointer-events: none; }
+  </style>
   <meta name="description" content="Agents pile up worktrees faster than you can keep track of. One button to automatically clear all that space out.">
   <meta property="og:title" content="xean — A little more room.">
   <meta property="og:description" content="A native macOS menu bar cleaner for worktrees, developer caches, and build files.">
@@ -11,10 +15,13 @@
   <title>xean — A little more room.</title>
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
   <link rel="preload" href="./assets/fonts/manrope-regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="./styles.css?v=20261019-popover-cleanup">
-  <script src="./app.js?v=20261019-fast-hover-audio" type="module"></script>
+  <link rel="preload" href="./assets/fonts/manrope-semibold.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="./assets/fonts/manrope-extrabold.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="./assets/fonts/manrope-variable.ttf" as="font" type="font/ttf" crossorigin>
+  <link id="site-styles" rel="stylesheet" href="./styles.css?v=20261019-ready-gate">
+  <script src="./app.js?v=20261019-ready-gate" type="module"></script>
 </head>
-<body>
+<body inert>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <symbol id="eraser" viewBox="0 0 24 24"><path d="m14 3 7 7a2 2 0 0 1 0 3l-7 7H7l-4-4a2 2 0 0 1 0-3l9-10a1.5 1.5 0 0 1 2 0Z"/><path d="m7.5 8 9 9M7 20h14"/></symbol>
     <symbol id="folder" viewBox="0 0 24 24"><path d="M2 7V5a2 2 0 0 1 2-2h5l3 3h8a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2Z"/></symbol>
@@ -50,7 +57,6 @@
         </div>
         <p class="sr-only" id="install-status" role="status"></p>
         <div class="copy-fallback" id="copy-fallback" hidden><label for="manual-prompt">Copy this prompt into your agent:</label><textarea id="manual-prompt" readonly rows="5"></textarea></div>
-        <noscript><p class="no-script"><a href="https://github.com/amoreX/xean#get-started">Get xean on GitHub</a></p></noscript>
       </section>
       <section class="demo" aria-label="Interactive xean app preview, using example data">
         <div class="demo-stage" id="demo-stage">

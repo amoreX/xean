@@ -54,5 +54,22 @@ copyButton.addEventListener('click', async () => {
   }
 });
 document.querySelectorAll('[data-sound]').forEach(link => link.addEventListener('click', () => cue(link.dataset.sound)));
+
+const styles = document.querySelector('#site-styles');
+// A failed stylesheet can still expose an empty CSSStyleSheet.
+if (!styles.sheet?.cssRules.length) {
+  await new Promise((resolve, reject) => {
+    styles.addEventListener('load', resolve, { once: true });
+    styles.addEventListener('error', () => reject(new Error('Unable to load site styles')), { once: true });
+  });
+}
+await Promise.all([
+  document.fonts.load('400 16px Manrope'),
+  document.fonts.load('600 16px Manrope'),
+  document.fonts.load('800 16px Manrope'),
+  document.fonts.load('800 16px "Manrope Wordmark"')
+]);
 initDemo(cue);
 initFooter(cue);
+document.body.inert = false;
+document.documentElement.dataset.ready = '';

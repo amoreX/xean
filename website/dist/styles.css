@@ -46,7 +46,6 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .github-link img { display: block; opacity: .75; }
 .copy-fallback { margin-top: 18px; font-size: 12px; }
 .copy-fallback textarea { display: block; width: 100%; margin-top: 8px; padding: 10px; border: 1px solid #bbccc0; border-radius: 9px; color: var(--ink); background: #fff9; resize: vertical; line-height: 1.5; }
-.no-script { margin-top: 12px; font-size: 12px; text-decoration: underline; }
 .demo { min-width: 0; width: 560px; max-width: 100%; justify-self: end; }
 .demo-stage { position: relative; height: var(--focus-height); --focus-height: 544px; --panel-height: calc(var(--focus-height) - 48px); --desktop-width: 560px; --desktop-height: 350px; --desktop-scale: .622222; --focus-width: 440px; --panel-width: 420px; --camera-x: -430px; }
 .desktop-viewport { position: absolute; left: 50%; top: calc((var(--focus-height) - var(--desktop-height)) / 2); width: 100%; height: var(--desktop-height); transform: translateX(-50%); overflow: clip; border-radius: 16px; box-shadow: 0 16px 45px -18px #183f3945, 0 0 0 1px #183f3915; background: #c4d7c5; transition: width 800ms cubic-bezier(.4,0,.2,1), height 800ms cubic-bezier(.4,0,.2,1), top 800ms cubic-bezier(.4,0,.2,1), border-radius 800ms; }
@@ -250,6 +249,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
   .demo { animation-delay: 160ms; }
   .brand-wordmark { animation-delay: 220ms; }
   .creator-credit { animation-delay: 280ms; }
+  html:not([data-ready]) :is(.intro > h1, .intro-description, .intro-actions, .demo, .brand-wordmark, .creator-credit) { animation-play-state: paused; }
   .intro-actions:focus-within, .demo:focus-within, .creator-credit:focus-within { opacity: 1 !important; transform: none !important; }
   @keyframes page-arrival {
     from { opacity: 0; transform: translateY(14px); }
