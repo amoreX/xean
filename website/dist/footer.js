@@ -18,17 +18,20 @@ export function initFooter(cue) {
   let previewSoundAttempted = false;
   let previewAudio;
   let hoveredLetter = -1;
+  let touch = null;
+  let suppressClick = false;
 
   function soundForPointer(event, hover = true) {
-    if (!event.isTrusted || !ready || document.hidden || (hover && event.pointerType === 'touch')) return;
+    if (!event.isTrusted || !ready || document.hidden) return;
     let index = letters.findIndex(({ slot }) => {
       const bounds = slot.getBoundingClientRect();
       return event.clientX >= bounds.left && event.clientX <= bounds.right &&
         event.clientY >= bounds.top && event.clientY <= bounds.bottom;
     });
-    if (index < 0 && hover && hoveredLetter >= 0 && event.type === 'pointerleave') {
+    if (index < 0 && hover && hoveredLetter >= 0 && (event.type === 'pointerleave' || touch?.dragging)) {
       const bounds = wordmark.getBoundingClientRect();
-      if (event.clientY >= bounds.top && event.clientY <= bounds.bottom) {
+      if (event.clientY >= bounds.top && event.clientY <= bounds.bottom &&
+          (event.clientX < bounds.left || event.clientX > bounds.right)) {
         index = event.clientX < bounds.left ? 0 : letters.length - 1;
       }
     }
@@ -39,6 +42,19 @@ export function initFooter(cue) {
       cue('tap', { hover, volume: .6, playbackRate: [0.9, 1, 1.12, 1.26][crossed] });
     }
     hoveredLetter = index;
+  }
+
+  function trackSwipe(event) {
+    if (touch?.id !== event.pointerId) return false;
+    if (!touch.dragging) {
+      const dx = Math.abs(event.clientX - touch.start.clientX);
+      const dy = Math.abs(event.clientY - touch.start.clientY);
+      if (dx < 6 || dx <= dy) return false;
+      touch.dragging = true;
+      soundForPointer(touch.start);
+    }
+    soundForPointer(event);
+    return true;
   }
 
   function render(time) {
@@ -109,6 +125,7 @@ export function initFooter(cue) {
     previewAudio?.abort();
     previewStartedAt = null;
     pressed = false;
+    touch = null;
     hoveredLetter = -1;
     letters.forEach(letter => { letter.target = rest(); });
     if (immediate) {
@@ -145,19 +162,52 @@ export function initFooter(cue) {
     else release(true);
   }, { threshold: .5 }).observe(wordmark);
   wordmark.addEventListener('pointerenter', event => {
+    if (event.pointerType === 'touch') return;
     soundForPointer(event);
-    if (event.pointerType !== 'touch') follow(event);
+    follow(event);
   });
-  wordmark.addEventListener('pointermove', event => { soundForPointer(event); follow(event); });
-  wordmark.addEventListener('click', event => soundForPointer(event, false));
-  wordmark.addEventListener('pointerdown', event => { pressed = true; follow(event); });
+  wordmark.addEventListener('pointermove', event => {
+    if (event.pointerType === 'touch') {
+      if (!trackSwipe(event)) return;
+    } else soundForPointer(event);
+    follow(event);
+  });
+  wordmark.addEventListener('click', event => {
+    if (suppressClick) { suppressClick = false; return; }
+    soundForPointer(event, false);
+  });
+  wordmark.addEventListener('pointerdown', event => {
+    if (!event.isPrimary) return;
+    suppressClick = false;
+    if (event.pointerType === 'touch') {
+      touch = { id: event.pointerId, start: event, dragging: false };
+      hoveredLetter = -1;
+      wordmark.setPointerCapture(event.pointerId);
+    }
+    pressed = true;
+    follow(event);
+  });
   wordmark.addEventListener('pointerup', event => {
+    if (event.pointerType === 'touch') {
+      if (touch?.id !== event.pointerId) return;
+      // Very fast gestures can finish before a pointermove is delivered.
+      trackSwipe(event);
+      suppressClick = touch.dragging;
+      release();
+      return;
+    }
     pressed = false;
-    if (event.pointerType === 'touch') release();
-    else follow(event);
+    follow(event);
   });
-  wordmark.addEventListener('pointerleave', event => { soundForPointer(event); release(); });
-  wordmark.addEventListener('pointercancel', () => release());
+  wordmark.addEventListener('pointerleave', event => {
+    if (event.pointerType === 'touch') return;
+    soundForPointer(event);
+    release();
+  });
+  wordmark.addEventListener('pointercancel', event => {
+    if (event.pointerType === 'touch' && touch?.id !== event.pointerId) return;
+    release();
+  });
   reducedMotion.addEventListener('change', () => { previewPending = false; release(true); });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) release(true);

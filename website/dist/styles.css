@@ -230,7 +230,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .result-content p { color: #656b61; font-size: 13px; line-height: 1.45; }
 #result-kept { font-size: 11px; }
 .brand-footer { display: flex; align-items: baseline; gap: 34px; padding-top: 4px; padding-bottom: 32px; }
-.brand-wordmark { font-family: 'Manrope Wordmark',Manrope,sans-serif; font-size: clamp(110px,16vw,206px); font-weight: 800; line-height: 1.08; letter-spacing: -.085em; margin-left: -.045em; white-space: nowrap; flex-shrink: 0; user-select: none; }
+.brand-wordmark { font-family: 'Manrope Wordmark',Manrope,sans-serif; font-size: clamp(110px,16vw,206px); font-weight: 800; line-height: 1.08; letter-spacing: -.085em; margin-left: -.045em; white-space: nowrap; flex-shrink: 0; user-select: none; touch-action: pan-y pinch-zoom; }
 .brand-letter { display: inline-grid; vertical-align: baseline; }
 .brand-letter::before { content: attr(data-letter); visibility: hidden; font-weight: 800; }
 .brand-letter::before, .brand-letter > span { grid-area: 1 / 1; }
