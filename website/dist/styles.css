@@ -4,8 +4,8 @@
 @font-face { font-family: 'Manrope Wordmark'; font-style: normal; font-weight: 200 800; font-display: swap; src: url('./assets/fonts/manrope-variable.ttf') format('truetype'); }
 :root { color-scheme: light; --paper: #f6f7f2; --ink: #183f39; --muted: #5e7164; --accent: #235b4e; --ease: cubic-bezier(.2,.7,.2,1); }
 * { box-sizing: border-box; -webkit-user-select: none; user-select: none; cursor: default; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-body { display: flex; flex-direction: column; min-height: 100svh; margin: 0; min-width: 0; padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); background: var(--paper); color: var(--ink); font-family: Manrope, sans-serif; -webkit-font-smoothing: antialiased; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: clip; }
+body { display: flex; flex-direction: column; min-height: 100svh; margin: 0; min-width: 0; overflow-x: clip; padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); background: var(--paper); color: var(--ink); font-family: Manrope, sans-serif; -webkit-font-smoothing: antialiased; }
 button, input, textarea { font: inherit; }
 button, a, input { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 button { cursor: default; color: inherit; }
@@ -16,13 +16,13 @@ h1, h2, p { margin: 0; }
 [hidden] { display: none !important; }
 .icon-library { position: absolute; width: 0; height: 0; overflow: hidden; }
 .icon { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
-.shell { width: min(1140px, calc(100% - 96px)); margin-inline: auto; }
+.shell { width: min(1140px, calc(100% - 96px)); min-width: 0; margin-inline: auto; }
 .skip-link { position: fixed; z-index: 9; left: 16px; top: 12px; padding: 12px; background: var(--ink); color: white; transform: translateY(-180%); }
 .skip-link:focus { transform: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 main { flex: 1; display: grid; align-items: center; }
-.hero-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.12fr); gap: 64px; padding: 60px 0 38px; align-items: center; }
-.intro { max-width: 460px; padding-bottom: 30px; }
+.hero-grid { display: grid; min-width: 0; grid-template-columns: minmax(0,1fr) minmax(0,1.12fr); gap: 64px; padding: 60px 0 38px; align-items: center; }
+.intro { min-width: 0; max-width: 460px; padding-bottom: 30px; }
 h1 > span { display: block; white-space: nowrap; }
 h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25px; line-height: 1.42; }
 .intro-description { margin-top: 22px; color: var(--muted); font-size: 14px; line-height: 1.9; }
@@ -235,7 +235,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .brand-letter::before { content: attr(data-letter); visibility: hidden; font-weight: 800; }
 .brand-letter::before, .brand-letter > span { grid-area: 1 / 1; }
 .brand-letter > span { justify-self: center; transform-origin: 50% 80%; }
-.creator-credit { padding-bottom: 12px; color: var(--muted); font-size: 12px; line-height: 1.9; }
+.creator-credit { min-width: 0; overflow-wrap: anywhere; padding-bottom: 12px; color: var(--muted); font-size: 12px; line-height: 1.9; }
 .creator-credit a { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
 .creator-credit a, .creator-credit a * { cursor: pointer; }
 .creator-credit .icon { width: 11px; height: 11px; }
@@ -267,7 +267,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
   .install-shell { flex-shrink: 0; max-width: calc(100% - 56px); height: 48px; }
   .install-shell.expanded { width: 300px; height: 154px; }
   .get-trigger { height: 46px; font-size: 13px; }
-  .install-options > * { min-height: 44px; font-size: 13px; }
+  .install-options > * { min-height: 44px; font-size: 13px; white-space: normal; }
   .copy-fallback textarea { font-size: 16px; }
   .demo-stage { --focus-height: clamp(320px,calc(100svh - 64px),544px); height: var(--desktop-height); scroll-margin-top: 12px; transition: height 800ms cubic-bezier(.4,0,.2,1); }
   .demo-stage.focused { height: var(--focus-height); }
@@ -292,6 +292,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
   .quit-view strong { font-size: 14px; }
   .quit-view .app-button { padding-inline: 8px; }
   h1 { font-size: 33px; }
+  h1 > span { white-space: normal; }
   .demo { justify-self: center; }
   .brand-footer { flex-wrap: wrap; gap: 12px; }
   .brand-wordmark { font-size: 150px; }
@@ -311,7 +312,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
   .cleaner-header, .app-scroll { padding-left: 14px; padding-right: 14px; }
   .cleaner-footer { padding-left: 14px; padding-right: 14px; }
   .brand-footer { padding-bottom: max(26px,env(safe-area-inset-bottom)); }
-  .brand-wordmark { font-size: 136px; }
+  .brand-wordmark { font-size: min(136px,40vw); }
   .creator-credit { font-size: 11px; }
 }
 @media (max-width: 900px) and (max-height: 600px) {
