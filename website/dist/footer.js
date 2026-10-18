@@ -11,12 +11,27 @@ export function initFooter() {
   let previousTime = 0;
   let pressed = false;
   let ready = false;
+  let entranceReady = false;
+  let visible = false;
+  let previewPending = true;
+  let previewStartedAt = null;
 
   function render(time) {
+    if (previewStartedAt !== null) {
+      const progress = Math.min((time - previewStartedAt) / 1600, 1);
+      const bounds = wordmark.getBoundingClientRect();
+      const radius = bounds.width * .55;
+      setTargets(bounds.left - radius + (bounds.width + radius * 2) * progress, bounds.top + bounds.height * .6);
+      if (progress === 1) {
+        previewPending = false;
+        previewStartedAt = null;
+        letters.forEach(letter => { letter.target = rest(); });
+      }
+    }
     const delta = previousTime ? Math.min(time - previousTime, 32) : 16;
     previousTime = time;
     const blend = 1 - Math.exp(-delta / 45);
-    let moving = false;
+    let moving = previewStartedAt !== null;
     for (const letter of letters) {
       for (const key of Object.keys(letter.current)) {
         const difference = letter.target[key] - letter.current[key];
@@ -39,13 +54,20 @@ export function initFooter() {
 
   function follow(event) {
     if (!ready || reducedMotion.matches || document.hidden) return;
+    previewPending = false;
+    previewStartedAt = null;
+    setTargets(event.clientX, event.clientY);
+    animate();
+  }
+
+  function setTargets(clientX, clientY) {
     const bounds = wordmark.getBoundingClientRect();
     const radius = bounds.width * .55;
     for (const letter of letters) {
       // Measure the fixed slot, so a moving glyph never chases its own position.
       const slot = letter.slot.getBoundingClientRect();
-      const dx = event.clientX - (slot.left + slot.width / 2);
-      const dy = event.clientY - (slot.top + slot.height * .6);
+      const dx = clientX - (slot.left + slot.width / 2);
+      const dy = clientY - (slot.top + slot.height * .6);
       const proximity = Math.max(0, 1 - Math.hypot(dx, dy * .65) / radius);
       const influence = proximity * proximity * (3 - 2 * proximity);
       letter.target = {
@@ -55,10 +77,10 @@ export function initFooter() {
         tilt: Math.max(-4, Math.min(4, dx * .06)) * influence
       };
     }
-    animate();
   }
 
   function release(immediate = false) {
+    previewStartedAt = null;
     pressed = false;
     letters.forEach(letter => { letter.target = rest(); });
     if (immediate) {
@@ -73,7 +95,22 @@ export function initFooter() {
     } else animate();
   }
 
+  function preview() {
+    if (!entranceReady || !visible || !previewPending || previewStartedAt !== null || reducedMotion.matches || document.hidden) return;
+    previewStartedAt = performance.now();
+    animate();
+  }
+
   document.fonts.ready.then(() => { ready = true; });
+  Promise.allSettled([document.fonts.ready, ...wordmark.getAnimations().map(animation => animation.finished)]).then(() => {
+    entranceReady = true;
+    preview();
+  });
+  new IntersectionObserver(([entry]) => {
+    visible = entry.isIntersecting && entry.intersectionRatio >= .5;
+    if (visible) preview();
+    else release(true);
+  }, { threshold: .5 }).observe(wordmark);
   wordmark.addEventListener('pointerenter', event => {
     if (event.pointerType !== 'touch') follow(event);
   });
@@ -86,6 +123,9 @@ export function initFooter() {
   });
   wordmark.addEventListener('pointerleave', () => release());
   wordmark.addEventListener('pointercancel', () => release());
-  reducedMotion.addEventListener('change', () => release(true));
-  document.addEventListener('visibilitychange', () => { if (document.hidden) release(true); });
+  reducedMotion.addEventListener('change', () => { previewPending = false; release(true); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) release(true);
+    else preview();
+  });
 }
