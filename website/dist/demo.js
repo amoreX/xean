@@ -15,6 +15,7 @@ const catalog = [
   ]]
 ];
 const defaults = ['claude', 'codex', 'superconductor', 'editors', 'packages', 'builds'];
+const initialFreeSpace = 4.7;
 const $ = selector => document.querySelector(selector);
 const icon = name => '<svg class="icon" aria-hidden="true"><use href="#' + name + '"/></svg>';
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -26,7 +27,7 @@ const easeInOut = progress => progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * pro
 export function initDemo(cue) {
   let categories;
   let selected;
-  let free = 74.7;
+  let free = initialFreeSpace;
   let busy = false;
   let version = 0;
   let screen = 'settings';
@@ -43,6 +44,7 @@ export function initDemo(cue) {
   const panel = $('#cleaner');
   const stage = $('#demo-stage');
   const cursor = $('#desktop-cursor');
+  const notifications = [...document.querySelectorAll('.storage-notification')];
   const scroller = $('#app-scroll');
   const numberAnimations = new Map();
 
@@ -61,6 +63,7 @@ export function initDemo(cue) {
   function focusDesktop(focused) {
     stage.classList.toggle('focused', focused);
     $('#desktop-hint').hidden = focused;
+    if (focused) notifications.forEach(notification => notification.classList.remove('visible'));
   }
 
   function animateValue(element, target, format, initial = target) {
@@ -86,8 +89,8 @@ export function initDemo(cue) {
   }
 
   function updateSpace() {
-    animateValue($('#free-space'), free, n => n.toFixed(1) + ' GB free', 74.7);
-    animateValue($('#menu-free'), free, n => Math.round(n) + ' GB', 74.7);
+    animateValue($('#free-space'), free, n => n.toFixed(1) + ' GB free', initialFreeSpace);
+    animateValue($('#menu-free'), free, n => Math.round(n) + ' GB', initialFreeSpace);
     updateWarning();
   }
 
@@ -203,10 +206,12 @@ export function initDemo(cue) {
     }
   }
 
-  function scrollToCategory(id) {
+  function scrollToElement(element) {
     const current = ++scrollGeneration;
-    const target = Math.max(0, Math.min($('#category-' + id).offsetTop - 16, scroller.scrollHeight - scroller.clientHeight));
     const from = scroller.scrollTop;
+    const offset = element.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+    const target = Math.max(0, Math.min(from + offset - 16, scroller.scrollHeight - scroller.clientHeight));
+    if (Math.abs(target - from) < 1) return Promise.resolve(true);
     const start = performance.now();
     return new Promise(resolve => {
       function step(now) {
@@ -330,7 +335,7 @@ export function initDemo(cue) {
     version++;
     scrollGeneration++;
     busy = false;
-    free = 74.7;
+    free = initialFreeSpace;
     selected = new Set(defaults);
     categories = catalog.map(([id, title, description, items]) => ({
       id, title, description, loaded: false, loading: false,
@@ -354,7 +359,10 @@ export function initDemo(cue) {
     syncSelection();
     renderMetrics();
     updateSpace();
-    cursor.classList.remove('visible', 'at-menu');
+    cursor.classList.remove('visible', 'pressed');
+    cursor.style.removeProperty('--cursor-x');
+    cursor.style.removeProperty('--cursor-y');
+    notifications.forEach(notification => notification.classList.toggle('visible', reducedMotion.matches));
     setScreen('closed');
     scroller.scrollTop = 0;
   }
@@ -370,20 +378,41 @@ export function initDemo(cue) {
     tourVersion++;
     tourRunning = false;
     scrollGeneration++;
-    cursor.classList.remove('visible');
+    cursor.classList.remove('visible', 'pressed');
     document.querySelectorAll('.tour-highlight, .tour-pressed').forEach(control => control.classList.remove('tour-highlight', 'tour-pressed'));
     updateTourControl();
   }
 
   async function demonstrateClick(control, valid, activate) {
-    control.classList.add('tour-highlight');
-    await wait(650);
     if (!valid()) return false;
+    if (scroller.contains(control)) {
+      const bounds = control.getBoundingClientRect();
+      const viewport = scroller.getBoundingClientRect();
+      if (bounds.top < viewport.top + 16 || bounds.bottom > viewport.bottom - 16) {
+        if (!await scrollToElement(control) || !valid()) return false;
+      }
+    }
+    const bounds = control.getBoundingClientRect();
+    const scene = $('#desktop-scene').getBoundingClientRect();
+    const scale = scene.width / 900;
+    // Keep the cursor tip on the real control in both desktop and zoomed coordinates.
+    const x = control.classList.contains('category-trigger') ? bounds.right - 12 : bounds.left + bounds.width / 2;
+    cursor.style.setProperty('--cursor-x', (x - scene.left) / scale - 3 + 'px');
+    cursor.style.setProperty('--cursor-y', (bounds.top + bounds.height / 2 - scene.top) / scale - 2 + 'px');
+    cursor.classList.add('visible');
+    await wait(700);
+    if (!valid()) return false;
+    control.classList.add('tour-highlight');
+    await wait(350);
+    if (!valid()) return false;
+    cursor.classList.add('pressed');
     control.classList.add('tour-pressed');
     await wait(220);
     if (!valid()) return false;
-    await activate();
+    const activation = activate();
+    cursor.classList.remove('pressed');
     control.classList.remove('tour-pressed');
+    await activation;
     await wait(420);
     control.classList.remove('tour-highlight');
     return valid();
@@ -394,43 +423,88 @@ export function initDemo(cue) {
     tourRunning = true;
     const current = ++tourVersion;
     const valid = () => current === tourVersion && tourEnabled && visible && !document.hidden;
-    await wait(1800);
+    await wait(300);
     if (!valid()) return;
-    cursor.classList.add('visible');
-    await wait(350);
-    if (!valid()) return;
-    cursor.classList.add('at-menu');
-    await wait(1000);
+    for (const notification of notifications) {
+      notification.classList.add('visible');
+      await wait(900);
+      if (!valid()) return;
+    }
+    await wait(900);
     if (!valid()) return;
     if (!await demonstrateClick($('#open-preview'), valid, () => setScreen('settings'))) return;
     await wait(550);
     if (!valid()) return;
-    cursor.classList.remove('visible');
     focusDesktop(true);
-    await wait(motion.zoom + 1800);
+    await wait(motion.zoom + 1200);
     if (!valid()) return;
-    await scrollToCategory('worktrees');
+
+    if (!await demonstrateClick($('#auto-clean'), valid, () => {
+      $('#automatic-row').hidden = true;
+      $('#auto-confirm').hidden = false;
+    })) return;
+    await wait(900);
     if (!valid()) return;
-    await wait(650);
-    if (!valid()) return;
-    const worktreeRow = $('#category-worktrees');
-    if (!await demonstrateClick(worktreeRow.querySelector('.category-select'), valid, () => {
-      selected.add('worktrees');
+    if (!await demonstrateClick($('[data-action="confirm-auto"]'), valid, () => {
+      $('#auto-clean').checked = true;
+      $('#automatic-row').hidden = false;
+      $('#auto-confirm').hidden = true;
       syncSelection();
     })) return;
-    await wait(600);
+    if (!await demonstrateClick($('#notify-low'), valid, () => {
+      $('#notify-low').checked = true;
+      updateWarning();
+    })) return;
+    await wait(1000);
     if (!valid()) return;
-    if (!await demonstrateClick(worktreeRow.querySelector('.category-trigger'), valid, () => expandCategory('worktrees', true))) return;
-    await wait(motion.row);
+
+    for (const category of categories) {
+      const row = $('#category-' + category.id);
+      if (!await scrollToElement(row) || !valid()) return;
+      if (category.id === 'worktrees') {
+        if (!await demonstrateClick(row.querySelector('.category-select'), valid, () => {
+          selected.add('worktrees');
+          syncSelection();
+        })) return;
+      }
+      const trigger = row.querySelector('.category-trigger');
+      if (!await demonstrateClick(trigger, valid, () => expandCategory(category.id, true))) return;
+      await wait(category.id === 'worktrees' ? 2400 : 1300);
+      if (!valid()) return;
+      const lastItem = row.querySelector('.inventory-row:last-child');
+      if (lastItem.getBoundingClientRect().bottom > scroller.getBoundingClientRect().bottom - 16) {
+        if (!await scrollToElement(lastItem) || !valid()) return;
+        await wait(1800);
+        if (!valid()) return;
+      }
+      if (!await demonstrateClick(trigger, valid, () => expandCategory(category.id, false))) return;
+      await wait(motion.row);
+      if (!valid()) return;
+    }
+
+    if (!await scrollToElement($('.app-settings')) || !valid()) return;
+    await wait(1300);
     if (!valid()) return;
-    await scrollToCategory('worktrees');
-    if (!valid()) return;
-    await wait(3800);
+    for (const mode of ['used', 'percent', 'available']) {
+      if (!await demonstrateClick($('[data-format="' + mode + '"]'), valid, () => {
+        memoryMode = mode;
+        document.querySelectorAll('[data-format]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.format === mode)));
+        sampleMetrics();
+      })) return;
+      await wait(700);
+      if (!valid()) return;
+    }
+    if (!await demonstrateClick($('#start-login'), valid, () => { $('#start-login').checked = true; })) return;
+    await wait(1000);
     if (!valid()) return;
     if (!await demonstrateClick($('#clean-button'), valid, () => {})) return;
+    cursor.classList.remove('visible');
     await clean(false);
     if (!valid()) return;
     await wait(6000);
+    if (!valid()) return;
+    if (!await demonstrateClick($('[data-action="done"]'), valid, () => setScreen('closed'))) return;
+    await wait(motion.zoom);
     if (!valid()) return;
     reset();
     tourRunning = false;

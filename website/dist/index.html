@@ -11,8 +11,8 @@
   <title>xean — A little more room.</title>
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
   <link rel="preload" href="./assets/fonts/manrope-regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="./styles.css">
-  <script src="./app.js" type="module"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261019-alerts-3">
+  <script src="./app.js?v=20261019-alerts" type="module"></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -71,19 +71,24 @@
                 <div class="finder-main"><div class="finder-toolbar"><span>‹ &nbsp; ›</span><strong>Worktrees</strong><svg class="icon"><use href="#search"/></svg></div><div class="finder-files"><div><svg class="icon"><use href="#folder"/></svg><span>studio-auth</span></div><div><svg class="icon"><use href="#folder"/></svg><span>studio-settings</span></div><div><svg class="icon"><use href="#folder"/></svg><span>studio-api</span></div></div><div class="finder-status">3 folders</div></div>
               </div>
               <div class="desktop-dock" aria-hidden="true"><span class="dock-finder">⌣</span><span class="dock-browser"><svg class="icon"><use href="#search"/></svg></span><span class="dock-terminal">›_</span><span class="dock-notes"></span><span class="dock-settings">⚙</span><i></i><span class="dock-trash">▤</span></div>
-              <svg class="desktop-cursor" id="desktop-cursor" viewBox="0 0 28 32" aria-hidden="true"><path d="M3 2v23l6-6 5 10 5-2-5-10h9Z" fill="#252b28" stroke="white" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              <div class="storage-notifications" aria-hidden="true">
+                <div class="storage-notification"><span class="notification-icon"><svg class="icon"><use href="#disk"/></svg></span><div><small>Macintosh HD <span>now</span></small><strong>Your disk is almost full</strong><p>Only 4.7 GB available. Make some room to keep working.</p></div></div>
+                <div class="storage-notification"><span class="notification-icon terminal-icon">›_</span><div><small>Terminal <span>now</span></small><strong>Build failed: not enough space</strong><p>Old build files and caches are piling up.</p></div></div>
+                <div class="storage-notification"><span class="notification-icon"><svg class="icon"><use href="#folder"/></svg></span><div><small>Coding agent <span>now</span></small><strong>Another worktree. Less room.</strong><p>Free up space before starting the next task.</p></div></div>
+              </div>
+              <div class="desktop-cursor" id="desktop-cursor" aria-hidden="true"><svg viewBox="0 0 28 32"><path d="M3 2v23l6-6 5 10 5-2-5-10h9Z" fill="#252b28" stroke="white" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
               <div class="menu-bar">
                 <div class="menu-stats" id="menu-stats" aria-hidden="true">
                   <span id="cpu-stat"><svg class="icon"><use href="#cpu"/></svg><span id="menu-cpu">18%</span></span>
                   <span id="memory-stat"><svg class="icon"><use href="#memory"/></svg><span id="menu-memory">8 GB free</span></span>
-                  <span id="disk-stat"><svg class="icon"><use href="#disk"/></svg><span id="menu-free">75 GB</span></span>
+                  <span id="disk-stat"><svg class="icon"><use href="#disk"/></svg><span id="menu-free">5 GB</span></span>
                 </div>
                 <button type="button" class="menu-eraser" id="open-preview" aria-label="Open xean preview"><svg class="icon" aria-hidden="true"><use href="#eraser"/></svg></button>
               </div>
               <div class="cleaner" id="cleaner" data-screen="closed">
                 <div class="quit-view" id="quit-view" hidden><strong>Quit xean?</strong><button class="app-button" data-action="cancel-quit">Cancel</button><button class="app-button prominent" data-action="quit">Quit</button></div>
                 <div class="app-view" id="app-view">
-                  <header class="cleaner-header"><span class="app-wordmark">xean</span><span id="low-warning" class="low-warning" aria-label="Low disk space" hidden>!</span><span class="free-space" id="free-space">74.7 GB free</span><button class="power-button" type="button" aria-label="Quit xean preview" data-action="request-quit"><svg class="icon" aria-hidden="true"><use href="#power"/></svg></button></header>
+                  <header class="cleaner-header"><span class="app-wordmark">xean</span><span id="low-warning" class="low-warning" aria-label="Low disk space" hidden>!</span><span class="free-space" id="free-space">4.7 GB free</span><button class="power-button" type="button" aria-label="Quit xean preview" data-action="request-quit"><svg class="icon" aria-hidden="true"><use href="#power"/></svg></button></header>
                   <div id="settings-view" class="settings-view">
                     <div class="scroll-viewport"><div class="app-scroll" id="app-scroll" tabindex="0" aria-label="Cleaner settings">
                       <div class="threshold-settings">
