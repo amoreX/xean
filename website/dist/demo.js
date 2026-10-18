@@ -191,9 +191,9 @@ export function initDemo(cue) {
 
   function renderCategories() {
     $('#category-list').innerHTML = categories.map(category =>
-      '<div class="category" id="category-' + category.id + '"><div class="category-row"><input class="category-select" type="checkbox" data-category="' + category.id +
+      '<div class="category" id="category-' + category.id + '"><div class="category-row"><label class="category-select-target"><input class="category-select" type="checkbox" data-category="' + category.id +
       '" aria-label="Include ' + category.title + ' in Clean"' + (selected.has(category.id) ? ' checked' : '') +
-      '><button class="category-trigger" type="button" data-category="' + category.id + '" aria-label="' + category.title + ' items" aria-expanded="false" aria-controls="inventory-panel-' + category.id +
+      '></label><button class="category-trigger" type="button" data-category="' + category.id + '" aria-label="' + category.title + ' items" aria-expanded="false" aria-controls="inventory-panel-' + category.id +
       '"><span class="category-copy"><strong>' + category.title + '</strong><span>' + category.description +
       '</span></span><span class="category-indicator"><span class="spinner category-loading" hidden></span>' + icon('chevron') +
       '</span></button></div><div class="disclosure" id="inventory-panel-' + category.id + '" inert><div class="disclosure-clip"><div class="inventory" id="inventory-' + category.id + '"></div></div></div></div>'
@@ -599,6 +599,15 @@ export function initDemo(cue) {
       setScreen('settings');
       focusDesktop(true);
       scroller.scrollTop = 0;
+      if (matchMedia('(max-width: 900px)').matches) {
+        const current = version;
+        // Wait for expansion so the page is tall enough to reveal the whole panel.
+        setTimeout(() => {
+          if (current === version && screen !== 'closed' && matchMedia('(max-width: 900px)').matches) {
+            stage.scrollIntoView({ block: 'start', behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+          }
+        }, reducedMotion.matches ? 0 : motion.zoom);
+      }
     } else { version++; busy = false; setScreen('closed'); }
   }
   $('#open-preview').addEventListener('click', togglePreview);
