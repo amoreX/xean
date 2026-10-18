@@ -150,7 +150,6 @@ export function initDemo(cue) {
     }
     $('#open-preview').setAttribute('aria-label', next === 'closed' ? 'Open xean preview' : 'Close xean preview');
     if (next === 'closed') {
-      hideCursor();
       focusDesktop(false);
       $('#automatic-row').hidden = false;
       $('#auto-confirm').hidden = true;
@@ -348,7 +347,7 @@ export function initDemo(cue) {
     }
   }
 
-  function reset() {
+  function reset({ keepCursor = false } = {}) {
     version++;
     scrollGeneration++;
     busy = false;
@@ -376,9 +375,11 @@ export function initDemo(cue) {
     syncSelection();
     renderMetrics();
     updateSpace();
-    hideCursor();
-    cursor.style.removeProperty('--cursor-x');
-    cursor.style.removeProperty('--cursor-y');
+    if (!keepCursor) {
+      hideCursor();
+      cursor.style.removeProperty('--cursor-x');
+      cursor.style.removeProperty('--cursor-y');
+    }
     notifications.forEach(notification => notification.classList.toggle('visible', reducedMotion.matches));
     setScreen('closed');
     scroller.scrollTop = 0;
@@ -425,7 +426,6 @@ export function initDemo(cue) {
     await activation;
     await wait(240);
     control.classList.remove('tour-highlight');
-    if (valid()) hideCursor();
     return valid();
   }
 
@@ -507,7 +507,7 @@ export function initDemo(cue) {
     if (!await demonstrateClick($('[data-action="done"]'), valid, () => setScreen('closed'))) return;
     await wait(motion.zoom);
     if (!valid()) return;
-    reset();
+    reset({ keepCursor: true });
     tourRunning = false;
     runTour();
   }
