@@ -19,6 +19,17 @@ async function unlockAudio() {
   } catch { return false; }
 }
 
+async function unlockOnInteraction(event) {
+  if (!event.isTrusted || document.hidden) return;
+  if (!await unlockAudio()) return;
+  document.removeEventListener('click', unlockOnInteraction, true);
+  document.removeEventListener('keydown', unlockOnInteraction, true);
+}
+
+// Register before the entrance animation or fonts finish, including on the page background.
+document.addEventListener('click', unlockOnInteraction, { capture: true, passive: true });
+document.addEventListener('keydown', unlockOnInteraction, { capture: true, passive: true });
+
 export async function cue(name, { volume = 0.7, automatic = false, hover = false, playbackRate = 1, signal } = {}) {
   if (document.hidden || signal?.aborted) return false;
   const now = performance.now();
