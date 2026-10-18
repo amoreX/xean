@@ -44,6 +44,10 @@ All source paths below are relative to [`Sources/BlitzClean`](../Sources/BlitzCl
 | `LaunchAtLoginController.swift` | `SMAppService.mainApp` registration and error reporting |
 
 Popover content is 420 × 580 points, shortened for smaller screens. Quit uses 64 points of content height.
+On macOS 26+, `CleanerPopover` styles AppKit's backdrop `NSGlassEffectView` as clear glass with a light
+neutral tint. It skips the hosted content subtree, preserves full window/content opacity, and restores
+the standard material for Reduce Transparency or increased contrast. It retains native material on
+older macOS versions or if AppKit does not expose a glass backdrop.
 `CleanerStatusAnchor` locates the trailing eraser. On opening, `CleanerPopover` captures that screen
 rectangle in a transparent, noninteractive `CleanerPresentationAnchor` window and presents the native
 popover relative to it. The host stays fixed while the menu bar relayouts, then disappears on close.

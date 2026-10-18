@@ -12,6 +12,7 @@ final class CleanerPopover: NSPopover {
   private(set) var isPresented = false
   private var generation = 0
   private var presentationAnchor: CleanerPresentationAnchor?
+  private var accessibilityObserver: NSObjectProtocol?
   var window: NSWindow? { contentViewController?.view.window }
 
   func present(relativeTo rect: NSRect, of view: NSView) {
@@ -24,9 +25,10 @@ final class CleanerPopover: NSPopover {
       let anchor = CleanerPresentationAnchor(screenRect: screenRect)
       presentationAnchor = anchor
       anchor.orderFront(nil)
-      appearance = NSAppearance(
-        named: NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
-          ? .accessibilityHighContrastAqua : .aqua)
+      appearance =
+        NSAppearance(
+          named: NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+            ? .accessibilityHighContrastAqua : .aqua) ?? NSAppearance(named: .aqua)
       show(
         relativeTo: anchor.positioningView.bounds, of: anchor.positioningView,
         preferredEdge: .minY)
@@ -34,10 +36,23 @@ final class CleanerPopover: NSPopover {
     }
     window?.makeKey()
     window?.makeFirstResponder(nil)
+    configureGlassBackdrop()
+    if accessibilityObserver == nil {
+      accessibilityObserver = NSWorkspace.shared.notificationCenter.addObserver(
+        forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+        object: nil, queue: .main
+      ) { [weak self] _ in
+        MainActor.assumeIsolated { self?.configureGlassBackdrop() }
+      }
+    }
     animate { [weak self] in self?.window?.animator().alphaValue = 1 }
   }
 
   override func close() {
+    if let accessibilityObserver {
+      NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver)
+      self.accessibilityObserver = nil
+    }
     super.close()
     presentationAnchor?.orderOut(nil)
     presentationAnchor = nil
@@ -62,10 +77,33 @@ final class CleanerPopover: NSPopover {
     guard contentSize != size else { return }
     let previousFrame = window?.frame
     contentSize = size
+    configureGlassBackdrop()
     guard animated, isPresented, let window, let previousFrame else { return }
     let targetFrame = window.frame
     window.setFrame(previousFrame, display: false)
     animate { window.animator().setFrame(targetFrame, display: true) }
+  }
+
+  private func configureGlassBackdrop() {
+    guard #available(macOS 26.0, *), let content = contentViewController?.view,
+      let frame = window?.contentView?.superview
+    else { return }
+    let clear =
+      !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+      && !NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+
+    // AppKit supplies the glass, border and pointer. Only style its backdrop;
+    // the hosting view's controls retain their own native glass treatment.
+    func configure(_ view: NSView) {
+      guard view !== content else { return }
+      if let glass = view as? NSGlassEffectView {
+        glass.style = clear ? .clear : .regular
+        glass.tintColor = clear ? .white.withAlphaComponent(0.24) : nil
+        return
+      }
+      view.subviews.forEach(configure)
+    }
+    configure(frame)
   }
 
   private func animate(_ changes: () -> Void, completion: (@MainActor @Sendable () -> Void)? = nil)

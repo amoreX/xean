@@ -122,8 +122,8 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .menu-eraser:hover { background: #183f3910; }
 .menu-eraser .icon { width: 16px; height: 16px; }
 .menu-eraser.has-warning::after { content: '!'; position: absolute; top: -2px; right: -5px; color: #e43737; font-size: 12px; font-weight: 800; }
-.cleaner { position: relative; width: 100%; height: var(--panel-height); color: #252725; color-scheme: light; border: 1px solid #ffffffd9; border-radius: 20px; background: #f4f5f2e8; backdrop-filter: blur(24px) saturate(1.1); -webkit-backdrop-filter: blur(24px) saturate(1.1); box-shadow: 0 12px 30px -14px #17291d50, 0 1px 4px #17291d24, inset 0 1px 0 #ffffff15; font-family: -apple-system,BlinkMacSystemFont,system-ui,sans-serif; font-size: 13px; transition: height 180ms var(--ease), opacity 180ms; }
-.cleaner::before { content: ''; position: absolute; left: calc(50% - 7px); top: -7px; width: 13px; height: 13px; transform: rotate(45deg); border-radius: 3px 0 0; background: #f4f5f2; border-top: 1px solid #ffffffd9; border-left: 1px solid #ffffffd9; }
+.cleaner { position: relative; width: 100%; height: var(--panel-height); color: #252725; color-scheme: light; border: 1px solid #ffffffd9; border-radius: 20px; background: #f4f5f23d; backdrop-filter: blur(24px) saturate(1.15); -webkit-backdrop-filter: blur(24px) saturate(1.15); box-shadow: 0 12px 30px -14px #17291d50, 0 1px 4px #17291d24, inset 0 1px 0 #ffffff15; font-family: -apple-system,BlinkMacSystemFont,system-ui,sans-serif; font-size: 13px; transition: height 180ms var(--ease), opacity 180ms; }
+.cleaner::before { content: ''; position: absolute; left: calc(50% - 7px); top: -7px; width: 13px; height: 13px; transform: rotate(45deg); border-radius: 3px 0 0; background: #f4f5f25c; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-top: 1px solid #ffffffd9; border-left: 1px solid #ffffffd9; }
 .cleaner[data-screen="quit"] { height: 64px; }
 .cleaner[data-screen="closed"] { visibility: hidden; opacity: 0; }
 .cleaner :focus-visible { outline-color: #007aff; outline-offset: 2px; }
@@ -138,7 +138,7 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
 .power-button:active { transform: scale(.9); }
 .settings-view, .cleanup-view, .result-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .scroll-viewport { position: relative; flex: 1; min-height: 0; overflow: hidden; }
-.scroll-viewport::before, .scroll-viewport::after { content: ''; position: absolute; left: 0; right: 0; height: 16px; z-index: 2; pointer-events: none; background: #f4f5f2; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.scroll-viewport::before, .scroll-viewport::after { content: ''; position: absolute; left: 0; right: 0; height: 16px; z-index: 2; pointer-events: none; background: #f4f5f21f; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
 .scroll-viewport::before { top: 0; mask-image: linear-gradient(#000,transparent); }
 .scroll-viewport::after { bottom: 0; mask-image: linear-gradient(transparent,#000); }
 .app-scroll { position: relative; height: 100%; overflow-y: auto; overflow-x: hidden; padding: 16px 17px 8px; scrollbar-width: none; overscroll-behavior: contain; overflow-anchor: none; }
@@ -324,4 +324,8 @@ h1 { font-size: clamp(26px,2.7vw,35px); font-weight: 400; letter-spacing: -1.25p
   .switch, .category-select { appearance: auto; }
   .switch::after, .category-select::after { display: none; }
   .cleaner, .install-shell { border: 1px solid CanvasText; }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .cleaner, .cleaner::before, .scroll-viewport::before, .scroll-viewport::after { background: #f4f5f2; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }

@@ -6,6 +6,49 @@ import Testing
 
 @MainActor
 struct CleanerPopoverTests {
+  @Test func clearBackdropPreservesContentGlassAndFullWindowOpacity() async throws {
+    guard #available(macOS 26.0, *) else { return }
+    let source = NSWindow(
+      contentRect: NSRect(x: 200, y: 200, width: 500, height: 400),
+      styleMask: [.borderless], backing: .buffered, defer: false)
+    let anchor = try #require(source.contentView)
+    source.orderFrontRegardless()
+    let controlGlass = NSGlassEffectView()
+    controlGlass.style = .regular
+    controlGlass.tintColor = .systemBlue
+    let controller = NSViewController()
+    controller.view = controlGlass
+    let popover = CleanerPopover()
+    popover.contentViewController = controller
+    popover.contentSize = NSSize(width: 200, height: 100)
+    defer {
+      popover.close()
+      source.orderOut(nil)
+    }
+
+    for _ in 0..<2 {
+      popover.present(relativeTo: NSRect(x: 200, y: 350, width: 24, height: 24), of: anchor)
+      try await Task.sleep(for: .milliseconds(250))
+      popover.resize(to: NSSize(width: 200, height: 64), animated: false)
+      let frame = try #require(popover.window?.contentView?.superview)
+      func backdrops(in view: NSView) -> [NSGlassEffectView] {
+        if view === controlGlass { return [] }
+        if let glass = view as? NSGlassEffectView { return [glass] }
+        return view.subviews.flatMap { backdrops(in: $0) }
+      }
+      let glass = try #require(backdrops(in: frame).first)
+      let clear =
+        !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        && !NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+      #expect(glass.style == (clear ? .clear : .regular))
+      #expect(controlGlass.style == .regular)
+      #expect(controlGlass.tintColor == .systemBlue)
+      #expect(controlGlass.alphaValue == 1)
+      #expect(popover.window?.alphaValue == 1)
+      popover.close()
+    }
+  }
+
   @Test func reopeningDuringDismissalKeepsTheNativePopoverVisible() async throws {
     let window = NSWindow(
       contentRect: NSRect(x: 200, y: 200, width: 500, height: 400),
