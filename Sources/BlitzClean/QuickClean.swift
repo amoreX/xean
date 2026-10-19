@@ -131,9 +131,26 @@ enum CacheCleaner {
         hasher.update(data: Data((destination + "\n").utf8))
       }
       if type == S_IFDIR {
-        let children = try FileManager.default.contentsOfDirectory(atPath: path).sorted()
+        guard let directory = opendir(path) else { throw CacheCleanError.unverified }
+        defer { closedir(directory) }
+        var children: [String] = []
+        while true {
+          try Task.checkCancellation()
+          errno = 0
+          guard let entry = readdir(directory) else {
+            guard errno == 0 else { throw CacheCleanError.unverified }
+            break
+          }
+          let name = withUnsafePointer(to: &entry.pointee.d_name) {
+            $0.withMemoryRebound(to: CChar.self, capacity: 1024) {
+              String(validatingCString: $0)
+            }
+          }
+          guard let name else { throw CacheCleanError.unverified }
+          if name != ".", name != ".." { children.append(name) }
+        }
         // Sorted depth-first traversal keeps scan and pre-delete fingerprints identical.
-        pending.append(contentsOf: children.reversed().map { path + "/" + $0 })
+        for child in children.sorted().reversed() { pending.append(path + "/" + child) }
       }
     }
     return CacheTree(

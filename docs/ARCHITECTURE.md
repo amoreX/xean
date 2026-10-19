@@ -103,6 +103,10 @@ threshold and never invoke the notification framework.
 Cleaner filesystem traversal has no arbitrary entry, depth, project-count, or elapsed-time cap. It uses
 cancellable depth-first traversal and prunes generated directories during project discovery. This is not
 an exhaustive search of every folder on every mounted disk. External commands retain hang timeouts.
+Cache tree scans and pre-delete revalidation use Swift's POSIX directory reader, preserving the same
+sorted fingerprint order while avoiding Foundation directory-listing overhead and an intermediate array
+of child paths. Directory read errors and invalid UTF-8 names reject the whole tree; cancellation closes
+the open directory. Removal continues through Foundation or the category's existing Git/Docker operation.
 
 Root symlinks are protected. Nested package links are fingerprinted and removed as links without walking
 their destinations. Unreadable trees, special files, failed activity checks, and identity changes keep the

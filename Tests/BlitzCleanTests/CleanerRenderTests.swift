@@ -62,7 +62,8 @@ struct CleanerRenderTests {
       model: model, launchAtLogin: LaunchAtLoginController(),
       menuBarStats: CleanerMenuBarStats(defaults: defaults))
     let host = NSHostingView(
-      rootView: view.frame(width: 420, height: 580).background(Color(nsColor: .windowBackgroundColor)))
+      rootView: view.frame(width: 420, height: 580).background(
+        Color(nsColor: .windowBackgroundColor)))
     host.frame = NSRect(x: 0, y: 0, width: 420, height: 580)
     let window = NSWindow(
       contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -80,7 +81,8 @@ struct CleanerRenderTests {
     }
   }
 
-  private func render(_ view: some View, size: CGSize, to url: URL, settle: Int = 300) async throws {
+  private func render(_ view: some View, size: CGSize, to url: URL, settle: Int = 300) async throws
+  {
     let host = NSHostingView(
       rootView: view.frame(width: size.width, height: size.height)
         .background(Color(nsColor: .windowBackgroundColor)))
