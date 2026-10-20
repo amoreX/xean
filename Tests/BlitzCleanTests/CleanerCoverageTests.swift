@@ -4,6 +4,15 @@ import Testing
 @testable import BlitzClean
 
 struct CleanerCoverageTests {
+  @Test func systemTemporaryRuleUsesTheSamePhysicalPathAsValidation() throws {
+    let rule = try #require(
+      CleanerCatalog.rules(
+        .builds, home: FileManager.default.homeDirectoryForCurrentUser.path
+      ).first { $0.kind == .staleTestDirectory })
+    #expect(rule.path == ReviewFile.canonicalPath(FileManager.default.temporaryDirectory.path))
+    #expect(rule.path == ReviewFile.canonicalPath(rule.path))
+  }
+
   @Test func recognizesPackageManagersHostedByGenericInterpreters() {
     #expect(
       CacheCleaner.runtimeTools("/opt/bin/node /opt/lib/npm/bin/npm-cli.js install") == ["npm"])

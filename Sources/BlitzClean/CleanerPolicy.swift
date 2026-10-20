@@ -209,10 +209,11 @@ enum CleanerCatalog {
           "Library/Developer/Xcode/DerivedData",
           owners: ["Xcode", "xcodebuild", "swift", "swift-frontend", "clang"])
       ]
-      if home == FileManager.default.homeDirectoryForCurrentUser.path {
-        rules.append(
-          staleTestRule(root: FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path)
-        )
+      if home == FileManager.default.homeDirectoryForCurrentUser.path,
+        let temporaryRoot = ReviewFile.canonicalPath(FileManager.default.temporaryDirectory.path)
+      {
+        // Foundation preserves /var here on macOS; validation uses realpath's /private/var.
+        rules.append(staleTestRule(root: temporaryRoot))
       }
       return rules
     case .dependencies, .docker, .worktrees: return []
