@@ -25,10 +25,10 @@ enum CleanerCategory: String, CaseIterable, Codable, Sendable, Identifiable {
     case .claude: "CLI and app caches"
     case .codex: "Desktop caches; sessions stay"
     case .superconductor: "Desktop and web caches"
-    case .editors: "Cursor, VS Code, Windsurf and Zed"
+    case .editors: "Cursor, VS Code, Windsurf, Zed and fed10"
     case .packages: "npm, Yarn, pip, uv, Bun and Homebrew"
-    case .browsers: "Safari, Chrome and Firefox"
-    case .builds: "Xcode, Swift, Rust and web build output"
+    case .browsers: "Safari, Chrome, Firefox and Zen"
+    case .builds: "Build output and stale Tickle test folders"
     case .dependencies: "Inactive node_modules with a lockfile"
     case .docker: "Unused build cache; containers and volumes stay"
     case .worktrees: "Clean, merged, inactive Git worktrees"
@@ -140,11 +140,19 @@ enum CleanerCatalog {
     .map { home + "/" + $0 }
   }
 
+  static func staleTestRule(root: String) -> CacheRule {
+    .init(
+      title: "Stale Tickle test folders", path: root,
+      recipe: "Tickle recreates these temporary test fixtures.", owners: [],
+      kind: .staleTestDirectory)
+  }
+
   static func rules(_ category: CleanerCategory, home: String) -> [CacheRule] {
     func rule(_ path: String, owners: Set<String>) -> CacheRule {
       .init(
         title: category.title, path: home + "/" + path,
-        recipe: "The tool recreates this cache when needed.", owners: owners, kind: .cache)
+        recipe: "The tool recreates this cache when needed.", owners: owners, kind: .cache,
+        checksRootActivity: true)
     }
     func electron(_ name: String, owners: Set<String>) -> [CacheRule] {
       [
@@ -155,7 +163,7 @@ enum CleanerCatalog {
     }
     switch category {
     case .claude:
-      let owners: Set<String> = ["claude", "Claude", "Claude Helper", "node"]
+      let owners: Set<String> = ["claude", "Claude", "Claude Helper"]
       return [
         ".claude/cache", "Library/Caches/claude-cli-nodejs",
         "Library/Caches/com.anthropic.claudefordesktop",
@@ -163,42 +171,50 @@ enum CleanerCatalog {
       .map { rule($0, owners: owners) } + electron("Claude", owners: owners)
     case .codex:
       let owners: Set<String> = [
-        "Codex", "codex", "Codex Helper", "ChatGPT", "ChatGPT Helper", "node",
+        "Codex", "codex", "Codex Helper", "ChatGPT", "ChatGPT Helper",
       ]
       return ["Library/Caches/Codex", "Library/Caches/com.openai.codex"]
         .map { rule($0, owners: owners) } + electron("Codex", owners: owners)
     case .superconductor:
       let owners: Set<String> = [
-        "Superconductor", "superconductor", "Superconductor Helper", "super.engineering", "node",
+        "Superconductor", "superconductor", "Superconductor Helper", "super.engineering",
       ]
       return ["Library/Caches/superconductor", "Library/Caches/com.zarifpour.superconductor"]
         .map { rule($0, owners: owners) } + electron("Superconductor", owners: owners)
     case .editors:
-      let owners: Set<String> = ["Cursor", "Code", "Windsurf", "Zed", "zed", "node"]
+      let owners: Set<String> = ["Cursor", "Code", "Windsurf", "Zed", "zed"]
       return ["Cursor", "Code", "Windsurf"].flatMap { name in
         electron(name, owners: owners)
           + [rule("Library/Application Support/\(name)/CachedData", owners: owners)]
       }
         + ["Library/Caches/cursor-compile-cache", "Library/Caches/Zed"]
         .map { rule($0, owners: owners) }
+        + [rule("Library/Caches/fed10", owners: ["fed10", "fed10 Helper"])]
     case .packages:
       return [
-        rule(".npm/_cacache", owners: ["npm", "npx", "node", "pnpm"]),
-        rule("Library/Caches/Yarn", owners: ["yarn", "node"]),
-        rule("Library/Caches/pip", owners: ["pip", "pip3", "python", "python3"]),
-        rule(".cache/pip", owners: ["pip", "pip3", "python", "python3"]),
-        rule(".cache/uv", owners: ["uv", "uvx", "python", "python3"]),
+        rule(".npm/_cacache", owners: ["npm", "npx", "pnpm"]),
+        rule("Library/Caches/Yarn", owners: ["yarn"]),
+        rule("Library/Caches/pip", owners: ["pip", "pip3"]),
+        rule(".cache/pip", owners: ["pip", "pip3"]),
+        rule(".cache/uv", owners: ["uv", "uvx"]),
         rule(".bun/install/cache", owners: ["bun"]),
-        rule("Library/Caches/Homebrew/downloads", owners: ["brew", "ruby"]),
+        rule("Library/Caches/Homebrew/downloads", owners: ["brew"]),
       ]
     case .browsers:
       return SystemDataCatalog.rules(home: home).filter { $0.kind == .cache }
+        + [rule("Library/Caches/zen", owners: ["zen", "Zen", "Zen Helper"])]
     case .builds:
-      return [
+      var rules = [
         rule(
           "Library/Developer/Xcode/DerivedData",
           owners: ["Xcode", "xcodebuild", "swift", "swift-frontend", "clang"])
       ]
+      if home == FileManager.default.homeDirectoryForCurrentUser.path {
+        rules.append(
+          staleTestRule(root: FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path)
+        )
+      }
+      return rules
     case .dependencies, .docker, .worktrees: return []
     }
   }

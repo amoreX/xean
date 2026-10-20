@@ -86,7 +86,7 @@ and disk, including a single metric, and the original available/used/percentage 
 one metric while enabled. Login remains a native switch. Do not start the historical process monitors.
 
 Automatic cache/build cleanup uses a 24-hour minimum, dependencies seven days, and worktrees their
-configured age. Manual Clean skips age cutoffs while retaining activity and identity checks. Nested
+configured age. Manual Clean skips age cutoffs while retaining activity and identity checks, except temporary Tickle test folders, which always require at least 24 hours. Nested
 package links are fingerprinted without following destinations; linked cleanup roots stay protected.
 Scanning and validation have no arbitrary entry, depth or elapsed-time caps and support cancellation.
 Project discovery still discovers common locations without a Project folders editor. Every deletion

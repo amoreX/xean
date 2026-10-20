@@ -108,6 +108,8 @@ sorted fingerprint order while avoiding Foundation directory-listing overhead an
 of child paths. Directory read errors and invalid UTF-8 names reject the whole tree; cancellation closes
 the open directory. Removal continues through Foundation or the category's existing Git/Docker operation.
 
+The active catalog also covers Zen and fed10 caches, plus allowlisted stale Tickle test directories in the current user’s macOS temporary directory. Test directories always require 24 hours of inactivity by tree modification time. Shared cache rules scope generic runtime activity to the cache root while retaining named app/tool guards.
+
 Root symlinks are protected. Nested package links are fingerprinted and removed as links without walking
 their destinations. Unreadable trees, special files, failed activity checks, and identity changes keep the
 candidate. [The user guide](CLEANER.md#cleanup-rules) specifies manual versus automatic age policies.

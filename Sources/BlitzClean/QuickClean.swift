@@ -5,8 +5,9 @@ import Foundation
 enum CleanupDataKind: Sendable {
   case cache
   case diagnosticReport
+  case staleTestDirectory
 
-  var minimumAgeDays: Int { self == .cache ? 1 : 30 }
+  var minimumAgeDays: Int { self == .diagnosticReport ? 30 : 1 }
 }
 
 struct CacheRule: Sendable {
@@ -15,6 +16,7 @@ struct CacheRule: Sendable {
   let recipe: String
   let owners: Set<String>
   let kind: CleanupDataKind
+  var checksRootActivity = false
 
   static var standard: [Self] {
     let home = FileManager.default.homeDirectoryForCurrentUser.path
@@ -44,6 +46,18 @@ struct CacheRule: Sendable {
   }
 
   func accepts(_ path: String) -> Bool {
+    if kind == .staleTestDirectory {
+      let name = URL(fileURLWithPath: path).lastPathComponent
+      let prefix = "tickle-desktop-test-"
+      let suffix = name.dropFirst(prefix.count)
+      var info = stat()
+      return name.hasPrefix(prefix) && suffix.count == 6
+        && suffix.utf8.allSatisfy {
+          (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0)
+        }
+        && lstat(path, &info) == 0 && info.st_mode & S_IFMT == S_IFDIR
+        && info.st_uid == getuid()
+    }
     guard kind == .diagnosticReport else { return true }
     var info = stat()
     return lstat(path, &info) == 0 && info.st_mode & S_IFMT == S_IFREG
@@ -172,10 +186,38 @@ enum CacheCleaner {
     let result = CleanupActivity.runCommand(
       .init(executable: "/bin/ps", arguments: ["-axo", "comm="], timeout: 5))
     guard result.status == 0, !result.output.isEmpty else { throw CacheCleanError.unverified }
-    return Set(
+    var names = Set(
       result.output.split(separator: "\n").map {
         URL(fileURLWithPath: String($0).trimmingCharacters(in: .whitespaces)).lastPathComponent
       })
+    // Package-manager entry points can run under generic interpreter executable names.
+    let commands = CleanupActivity.runCommand(
+      .init(executable: "/bin/ps", arguments: ["-axo", "args="], timeout: 5))
+    guard commands.status == 0, !commands.output.isEmpty else { throw CacheCleanError.unverified }
+    for line in commands.output.split(separator: "\n") {
+      names.formUnion(runtimeTools(String(line)))
+    }
+    return names
+  }
+
+  static func runtimeTools(_ command: String) -> Set<String> {
+    let tokens = command.split(whereSeparator: \.isWhitespace).map(String.init)
+    guard let executable = tokens.first.map({ URL(fileURLWithPath: $0).lastPathComponent }),
+      ["node", "python", "python3", "ruby"].contains(executable)
+        || executable.hasPrefix("python3.")
+    else { return [] }
+    let entryPoints: [String: String] = [
+      "npm-cli.js": "npm", "npx-cli.js": "npx", "pnpm.cjs": "pnpm", "pnpm.js": "pnpm",
+      "yarn.js": "yarn", "yarn.cjs": "yarn", "pip": "pip", "pip3": "pip3",
+      "uv": "uv", "uvx": "uvx", "brew.rb": "brew",
+    ]
+    var tools: Set<String> = []
+    for token in tokens.dropFirst() {
+      if let tool = entryPoints[URL(fileURLWithPath: token).lastPathComponent] {
+        tools.insert(tool)
+      }
+    }
+    return tools
   }
 
   static func scan(_ request: CacheScanRequest) -> CacheScanResult {
@@ -197,6 +239,12 @@ enum CacheCleaner {
         notes.append("\(rule.title): folder could not be read or is a link.")
         continue
       }
+      if rule.checksRootActivity {
+        do { try validateInactive(rule.path) } catch {
+          notes.append("\(rule.title): \(error.localizedDescription)")
+          continue
+        }
+      }
       for child in children.sorted() {
         guard !Task.isCancelled else { break }
         let path = rule.path + "/" + child
@@ -206,7 +254,7 @@ enum CacheCleaner {
           let candidate = CacheCandidate(path: path, rule: rule, tree: contents)
           try validateLocation(candidate)
           guard
-            !request.respectsAge
+            (!request.respectsAge && rule.kind != .staleTestDirectory)
               || contents.newest
                 < request.date.addingTimeInterval(-Double(rule.kind.minimumAgeDays) * 86_400),
             contents.bytes > 0
@@ -220,20 +268,27 @@ enum CacheCleaner {
     return .init(candidates: candidates.sorted { $0.tree.bytes > $1.tree.bytes }, notes: notes)
   }
 
+  static func validateInactive(_ path: String) throws {
+    var isDirectory: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+      throw CacheCleanError.unverified
+    }
+    let activity = CleanupActivity.command(
+      isDirectory.boolValue ? ["-nP", "+D", path] : ["-nP", "--", path])
+    if activity.status == 0 { throw CacheCleanError.busy }
+    guard activity.status == 1, activity.output.isEmpty else { throw CacheCleanError.unverified }
+  }
+
   static func delete(_ candidate: CacheCandidate, respectsAge: Bool = true) throws -> CleanupWin {
     try validateLocation(candidate)
     let owners = try processes()
     guard owners.isDisjoint(with: candidate.rule.owners) else { throw CacheCleanError.busy }
-    var isDirectory: ObjCBool = false
-    _ = FileManager.default.fileExists(atPath: candidate.path, isDirectory: &isDirectory)
-    let activity = CleanupActivity.command(
-      isDirectory.boolValue ? ["-nP", "+D", candidate.path] : ["-nP", "--", candidate.path])
-    if activity.status == 0 { throw CacheCleanError.busy }
-    guard activity.status == 1, activity.output.isEmpty else { throw CacheCleanError.unverified }
+    if candidate.rule.checksRootActivity { try validateInactive(candidate.rule.path) }
+    try validateInactive(candidate.path)
     let current = try tree(.init(path: candidate.path))
     guard current == candidate.tree else { throw CacheCleanError.changed }
     guard
-      !respectsAge
+      (!respectsAge && candidate.rule.kind != .staleTestDirectory)
         || current.newest
           < Date.now.addingTimeInterval(-Double(candidate.rule.kind.minimumAgeDays) * 86_400)
     else {

@@ -60,10 +60,10 @@ not open result screens. Both switches off means manual cleanup only. Checks do 
 | Claude Code | `.claude/cache`, supported CLI cache, Claude desktop cache and named renderer/GPU caches |
 | Codex | Supported macOS caches and named renderer/GPU caches in its desktop profile; sessions stay |
 | Superconductor | Supported macOS and named renderer/GPU caches |
-| Coding editors | Cursor, VS Code, Windsurf, and Zed cache locations |
+| Coding editors | Cursor, VS Code, Windsurf, Zed, and fed10 cache locations |
 | Package caches | npm, Yarn, pip, uv, Bun, and Homebrew download caches |
-| Browser caches | Supported Safari, Chrome, and Firefox cache locations |
-| Build files | Xcode DerivedData and supported web/Swift/Rust output in discovered projects, including nested packages; project output requires a matching manifest, Git ignore rule, and no tracked files |
+| Browser caches | Supported Safari, Chrome, Firefox, and Zen cache locations |
+| Build files | Xcode DerivedData and supported web/Swift/Rust output in discovered projects, including nested packages; project output requires a matching manifest, Git ignore rule, and no tracked files; also stale `tickle-desktop-test-XXXXXX` directories in the current user’s macOS temporary directory |
 | Project dependencies | Inactive `node_modules` with an exact reinstall lockfile; package links are supported without following destinations |
 | Docker build cache | Unused builder cache through a verified local Unix socket; images, containers, and volumes remain |
 | Old worktrees | Clean, merged, inactive Git-linked checkouts; removal uses `git worktree remove` without force and leaves branches intact |
@@ -74,13 +74,14 @@ Docker, and worktrees start unselected. Previous selections are retained.
 | Age policy | Manual Clean / Delete | Automatic cleanup |
 | --- | --- | --- |
 | Caches and build output | No age cutoff | At least 24 hours |
+| Tickle temporary test folders | At least 24 hours | At least 24 hours |
 | Project dependencies | No age cutoff | At least seven days |
 | Docker builder cache | No age filter | At least 24 hours; the displayed estimate can include newer cache that stays |
 | Worktrees | No age cutoff | Configured minimum; age includes file changes, creation, and Git metadata activity |
 
 Every deletion rechecks identity, metadata, location, and activity. Automatic operations also recheck age.
 Active tools, open files, unreadable trees, special files, identity changes, and failed verification keep
-the item. Shared caches use tool activity checks; project build output uses the project's working
+the item. Shared caches retain named app/package-manager checks. Generic Node, Python, and Ruby processes do not block unrelated caches: affected cache rules check open files and working directories across the cache root at scan time and again before removal. Failed activity checks keep the cache. Temporary test cleanup accepts only owned directories with the exact six-character alphanumeric test suffix, keeps linked roots, and requires every entry to be at least 24 hours old even for manual cleanup. Each test folder is checked for open files and working directories before deletion. Project build output uses the project's working
 directories and open files rather than blocking on every unrelated compiler or Node process.
 
 Primary, locked, detached, unmerged, dirty, active, or explicitly kept worktrees remain protected. Ignored
