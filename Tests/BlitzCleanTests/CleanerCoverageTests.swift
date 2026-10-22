@@ -1,9 +1,23 @@
+import Darwin
 import Foundation
 import Testing
 
 @testable import BlitzClean
 
 struct CleanerCoverageTests {
+  @Test func recentTemporaryRootIsKeptBeforeWalkingItsContents() throws {
+    let fixture = try CleanerFixture()
+    defer { fixture.remove() }
+    let name = "tickle-desktop-test-Ab12cD"
+    try fixture.write(name + "/payload", "fixture")
+    #expect(mkfifo(fixture.path + "/" + name + "/pipe", 0o600) == 0)
+    let report = CacheCleaner.scan(
+      .init(
+        rules: [CleanerCatalog.staleTestRule(root: fixture.path)], date: .now, respectsAge: false))
+    #expect(report.candidates.isEmpty)
+    #expect(report.notes == ["1 recent Tickle test folders kept (24-hour minimum)."])
+  }
+
   @Test func projectScanDoesNotMeasureAlreadyProtectedFolders() throws {
     let fixture = try CleanerFixture()
     defer { fixture.remove() }

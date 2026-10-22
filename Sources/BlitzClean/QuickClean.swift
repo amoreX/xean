@@ -263,6 +263,21 @@ enum CacheCleaner {
         let path = rule.path + "/" + child
         guard rule.accepts(path) else { continue }
         do {
+          var rootInfo = stat()
+          let cutoff = request.date.addingTimeInterval(-Double(rule.kind.minimumAgeDays) * 86_400)
+          if request.respectsAge || rule.kind.alwaysRequiresAge,
+            lstat(path, &rootInfo) == 0, rootInfo.st_uid == getuid(),
+            rootInfo.st_mode & S_IFMT == S_IFDIR || rootInfo.st_mode & S_IFMT == S_IFREG,
+            Date(timeIntervalSince1970: Double(rootInfo.st_mtimespec.tv_sec)) >= cutoff
+          {
+            // The tree's newest date includes its root. A recent root already fails age policy.
+            if rule.kind == .staleTestDirectory {
+              recentTestFolders += 1
+            } else if rule.kind.alwaysRequiresAge {
+              notes.append("\(child): kept until every file is at least 24 hours old.")
+            }
+            continue
+          }
           if rule.kind == .temporaryEnvironment || rule.kind == .temporaryBuild {
             try TemporaryCleanup.validateActivity(at: path)
           }
