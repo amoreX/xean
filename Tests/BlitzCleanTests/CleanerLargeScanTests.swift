@@ -61,6 +61,21 @@ struct CleanerLargeScanTests {
     #expect(discovery.dependencies.count == 301)
   }
 
+  @Test func discoverySkipsPackagesAndDoesNotRepeatOverlappingRoots() throws {
+    let fixture = try CleanerFixture()
+    defer { fixture.remove() }
+    try fixture.write("project/package.json", "{}")
+    try fixture.write("project/.git", "gitdir: fixture")
+    try fixture.write("project/node_modules/package/keep", "fixture")
+    try fixture.write("Hidden.app/Contents/package.json", "{}")
+    let result = DeveloperArtifactScanner.discover(
+      .init(roots: [fixture.path, fixture.path + "/project"]))
+    #expect(result.projects == [fixture.path + "/project"])
+    #expect(result.repositories == [fixture.path + "/project"])
+    #expect(result.dependencies == [fixture.path + "/project/node_modules"])
+    #expect(!result.limited)
+  }
+
   @Test func treeTraversalHonorsCancellation() async throws {
     let fixture = try CleanerFixture()
     defer { fixture.remove() }

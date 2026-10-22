@@ -388,12 +388,8 @@ enum CleanerScanner {
         }
       }
     }
-    for index in result.kept.indices where result.kept[index].bytes == nil {
-      guard !Task.isCancelled else { return }
-      result.kept[index].bytes = try? CacheCleaner.tree(
-        .init(path: result.kept[index].path)
-      ).bytes
-    }
+    // Protected folders are already ineligible. Do not walk entire simulators,
+    // primary checkouts or runtime stores merely to display their size.
   }
 }
 

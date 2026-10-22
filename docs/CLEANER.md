@@ -27,7 +27,7 @@ Completed manual category scans are reusable for **30 seconds after completion**
 invalidated lists clear their old contents before showing Checking… and scanning again. Clean shares those
 cached results and scans only missing/expired selected categories. Each removal still validates its target
 again. Changing roots or worktree age invalidates category caches; successful removal clears the matching
-path and descendants from other cached categories. The header refresh button bypasses the cache and rescans selected and previously opened categories without changing selections or deleting files. Running-app protections still apply.
+path and descendants from other cached categories. The header refresh button bypasses the cache and rescans selected and previously opened categories without changing selections or deleting files. Running-app protections still apply. Refresh publishes cache results before checking project folders and worktrees. Protected folders remain visible with their reasons; xean does not recursively measure them solely for display.
 
 Cleaner traversal has no arbitrary entry-count, depth, project-count, or elapsed-time cap. Large dependency
 trees can take longer to inspect. Project discovery starts at known development/tool locations and saved

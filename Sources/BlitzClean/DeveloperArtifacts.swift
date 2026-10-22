@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 enum DeveloperArtifactKind: String, Sendable {
@@ -62,55 +63,85 @@ enum DeveloperArtifactScanner {
       ".git", ".next", ".nuxt", ".svelte-kit", ".turbo", ".parcel-cache", ".build", ".pnpm",
       ".venv", "Pods", "build", "dist", "target", "Library", ".Trash",
     ]
-    let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey, .isPackageKey]
     for root in Set(request.roots).sorted() {
       guard let path = ReviewFile.canonicalPath(root) else { continue }
-      let url = URL(fileURLWithPath: path)
-      if FileManager.default.fileExists(atPath: url.appendingPathComponent(".git").path) {
+      if FileManager.default.fileExists(atPath: path + "/.git") {
         repositories.insert(path)
       }
-      guard
-        let enumerator = FileManager.default.enumerator(
-          at: url, includingPropertiesForKeys: Array(keys),
-          options: [],
-          errorHandler: { _, _ in
-            limited = true
-            return true
-          })
-      else { continue }
-      for case let child as URL in enumerator {
-        if request.maximumEntries.map({ visitedEntries >= $0 }) == true || Task.isCancelled {
+      var pending: [(String, Int)] = [(path, 0)]
+      while let (directoryPath, depth) = pending.popLast() {
+        if Task.isCancelled || request.maximumEntries.map({ visitedEntries >= $0 }) == true {
           limited = true
           break
         }
-        visitedEntries += 1
-        guard let values = try? child.resourceValues(forKeys: keys) else {
+        guard visited.insert(directoryPath).inserted else { continue }
+        var info = stat()
+        guard lstat(directoryPath, &info) == 0, info.st_mode & S_IFMT == S_IFDIR,
+          let directory = opendir(directoryPath)
+        else {
           limited = true
           continue
         }
-        let name = child.lastPathComponent
-        if values.isSymbolicLink == true {
-          enumerator.skipDescendants()
-          continue
-        }
-        if name == ".git" {
-          repositories.insert(child.deletingLastPathComponent().path)
-          if values.isDirectory == true { enumerator.skipDescendants() }
-        } else if ["package.json", "Cargo.toml", "Package.swift"].contains(name),
-          values.isDirectory != true
-        {
-          projects.insert(child.deletingLastPathComponent().path)
-        } else if values.isDirectory == true {
-          if name == "node_modules" {
-            dependencies.insert(child.path)
-            enumerator.skipDescendants()
-          } else if ignored.contains(name) || values.isPackage == true
-            || !visited.insert(child.path).inserted
-          {
-            enumerator.skipDescendants()
-          } else if let maximumDepth = request.maximumDepth, enumerator.level >= maximumDepth {
+        defer { closedir(directory) }
+        while true {
+          if Task.isCancelled || request.maximumEntries.map({ visitedEntries >= $0 }) == true {
             limited = true
-            enumerator.skipDescendants()
+            break
+          }
+          errno = 0
+          guard let entry = readdir(directory) else {
+            if errno != 0 { limited = true }
+            break
+          }
+          guard
+            let name = withUnsafePointer(
+              to: &entry.pointee.d_name,
+              { pointer in
+                pointer.withMemoryRebound(to: CChar.self, capacity: 1024) {
+                  String(validatingCString: $0)
+                }
+              })
+          else {
+            limited = true
+            continue
+          }
+          if name == "." || name == ".." { continue }
+          visitedEntries += 1
+          let child = directoryPath + "/" + name
+          var type = entry.pointee.d_type
+          if type == DT_UNKNOWN {
+            var childInfo = stat()
+            guard lstat(child, &childInfo) == 0 else {
+              limited = true
+              continue
+            }
+            type = UInt8((childInfo.st_mode & S_IFMT) >> 12)
+          }
+          if type == DT_LNK { continue }
+          if name == ".git" {
+            repositories.insert(directoryPath)
+          } else if ["package.json", "Cargo.toml", "Package.swift"].contains(name), type != DT_DIR {
+            projects.insert(directoryPath)
+          } else if type == DT_DIR {
+            if name == "node_modules" {
+              dependencies.insert(child)
+            } else if !ignored.contains(name) {
+              // Package metadata is needed only for directories, not every source file.
+              guard
+                let values = try? URL(fileURLWithPath: child).resourceValues(forKeys: [
+                  .isPackageKey
+                ])
+              else {
+                limited = true
+                continue
+              }
+              if values.isPackage == true { continue }
+              if let maximumDepth = request.maximumDepth, depth + 1 >= maximumDepth {
+                limited = true
+              } else {
+                pending.append((child, depth + 1))
+              }
+            }
           }
         }
       }

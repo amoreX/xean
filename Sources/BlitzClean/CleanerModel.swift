@@ -192,10 +192,18 @@ final class CleanerModel: ObservableObject {
     invalidateCategories(Set(categoryScans.keys))
     scan = nil
     status = "Refreshing scans…"
-    if !requested.categories.isEmpty {
-      let report = await driver.scan(requested, automatic: false)
+    let projectCategories = requested.categories.intersection([.builds, .dependencies, .worktrees])
+    let groups = [requested.categories.subtracting(projectCategories), projectCategories]
+    for categories in groups where !categories.isEmpty {
+      guard !stopRequested, sameScope(original, preferences) else { break }
+      status =
+        categories == projectCategories
+        ? "Checking project folders and worktrees…" : "Refreshing caches…"
+      var batch = requested
+      batch.categories = categories
+      let report = await driver.scan(batch, automatic: false)
       if !stopRequested, sameScope(original, preferences) {
-        cache(report, categories: requested.categories)
+        cache(report, categories: categories)
       }
     }
     if stopRequested {

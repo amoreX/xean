@@ -4,6 +4,23 @@ import Testing
 @testable import BlitzClean
 
 struct CleanerCoverageTests {
+  @Test func projectScanDoesNotMeasureAlreadyProtectedFolders() throws {
+    let fixture = try CleanerFixture()
+    defer { fixture.remove() }
+    try fixture.write("protected/payload", String(repeating: "x", count: 4096))
+    var result = CleanerScan(kept: [
+      .init(category: .builds, path: fixture.path + "/protected", reason: "Protected data")
+    ])
+    var preferences = CleanerPreferences()
+    preferences.categories = [.builds]
+    CleanerScanner.scanProjects(
+      roots: [], preferences: preferences, automatic: false, result: &result)
+    #expect(result.kept.count == 1)
+    #expect(result.kept[0].bytes == nil)
+    #expect(result.kept[0].reason == "Protected data")
+    #expect(result.items.isEmpty)
+  }
+
   @Test func systemTemporaryRuleUsesTheSamePhysicalPathAsValidation() throws {
     let rule = try #require(
       CleanerCatalog.rules(

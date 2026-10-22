@@ -617,6 +617,24 @@ struct CleanerModelTests {
     #expect(await context.driver.scanCount == 3)
   }
 
+  @Test func refreshPublishesCachesBeforeProjectChecksFinish() async throws {
+    let context = try context()
+    defer { context.fixture.remove() }
+    context.model.preferences.categories = [.claude, .builds, .worktrees]
+    let refresh = Task { await context.model.refreshScans() }
+    for _ in 0..<200 {
+      if await context.driver.scanCount == 2 { break }
+      try await Task.sleep(for: .milliseconds(1))
+    }
+    #expect(context.model.categoryScans[.claude] != nil)
+    #expect(context.model.isBusy)
+    #expect(context.model.status == "Checking project folders and worktrees…")
+    await refresh.value
+    #expect(context.model.categoryScans[.builds] != nil)
+    #expect(context.model.categoryScans[.worktrees] != nil)
+    #expect(await context.driver.removals.isEmpty)
+  }
+
   @Test func refreshDoesNotStartAnotherScanWhileBusy() async throws {
     let context = try context()
     defer { context.fixture.remove() }
