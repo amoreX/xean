@@ -74,7 +74,7 @@ struct CleanerRenderTests {
       to: directory.appendingPathComponent("cleaner-completed-dismissed.png"), settle: 2_400)
   }
 
-  @Test func rendersSequentialRemovalWhenRequested() async throws {
+  @Test func rendersImmediateRemovalWhenRequested() async throws {
     guard let output = ProcessInfo.processInfo.environment["BLITZCLEAN_DESIGN_DIR"] else { return }
     let directory = URL(fileURLWithPath: output)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -101,12 +101,10 @@ struct CleanerRenderTests {
     defer { window.orderOut(nil) }
     try await Task.sleep(for: .milliseconds(300))
     await model.cleanSelected()
-    // The fake driver has already finished. Presentation must drain one row at a time.
+    // Completion must appear without waiting for a per-row animation queue.
     #expect(await driver.removals.count == 2)
-    for (delay, name) in [(300, "first"), (960, "second"), (1_100, "finished")] {
-      try await Task.sleep(for: .milliseconds(delay))
-      try snapshot(host, to: directory.appendingPathComponent("cleaner-removal-\(name).png"))
-    }
+    try await Task.sleep(for: .milliseconds(50))
+    try snapshot(host, to: directory.appendingPathComponent("cleaner-removal-immediate.png"))
   }
 
   private func render(_ view: some View, size: CGSize, to url: URL, settle: Int = 300) async throws

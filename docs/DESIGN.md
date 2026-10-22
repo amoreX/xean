@@ -29,11 +29,12 @@ close the panel while disk checks and active cleanup continue; Quit exits.
 
 Keep ordinary control and disclosure animations at 180 ms with no bounce, text reveals or content
 scaling. Popover visibility uses a short whole-window fade. Disclosures animate their clipped height,
-leaving text layout unchanged. Confirmed removals use a red center-out background sweep (320 ms),
-a 120 ms hold, a short 18-point slide and fade (240 ms), then height collapse (280 ms). Present bulk
-removals one at a time without delaying filesystem operations; show the result after the last animation.
-Use the same removal treatment for an individual Delete and the website preview. The website runs this
-faster: 80 ms sweep, 16 ms hold, 56 ms departure and 64 ms collapse, with a 48 ms per-item lead-in.
+leaving text layout unchanged. In the native app, confirmed removals disappear immediately, including
+individual Delete actions. Do not queue per-row sweeps, holds or collapse animations. Show completion as
+soon as all operations finish. Failed items retain their reasons. Up to three independent filesystem
+removals run concurrently; overlapping paths, shared project scopes, Git worktrees and Docker operations
+must not run together. The website preview retains its 80 ms sweep, 16 ms hold, 56 ms departure and
+64 ms collapse, with a 48 ms per-item lead-in.
 The website popover has one continuous curved outline and glass surface, including the rounded notch
 beneath the menu bar icon; keep its notch and body joined while the panel resizes.
 Unmount closed controls after the collapse so they
@@ -64,7 +65,7 @@ successful removals collapse out; failures stay with their reason.
 The idle footer has one right-aligned Clean button and no hint text. Clean immediately scans and
 removes eligible selected data, with no review or second confirmation. Replace the settings with a
 cleanup screen: scanning status first, then the actual deletion queue. Collapse each row only after
-its deletion succeeds; failures stay visible. After the final collapse show a result screen with
+its deletion succeeds; failures stay visible. After the final removal finishes show a result screen with
 removed bytes and count. Distinguish successful, empty and partial/failed runs, retaining reasons for
 items that could not be removed. Do not claim files were removed when none were. Done closes the
 panel. Closing clears this transient result; closing during cleanup must not cancel deletion or

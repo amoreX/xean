@@ -9,7 +9,6 @@ struct CleanerView: View {
   var onQuitCancel: () -> Void = {}
   var onClose: () -> Void = {}
   @State private var confirmAutomatic = false
-  @State private var presentedRemovals: Set<String> = []
 
   var body: some View {
     Group {
@@ -19,8 +18,7 @@ struct CleanerView: View {
         VStack(spacing: 0) {
           header.padding(.horizontal, 18).padding(.top, 14).padding(.bottom, 10)
           CleanerCleanupView(
-            model: model, cleanup: cleanup, onClose: onClose,
-            presentedRemovals: $presentedRemovals
+            model: model, cleanup: cleanup, onClose: onClose
           )
           .id(cleanup.id)
         }
@@ -33,7 +31,6 @@ struct CleanerView: View {
     .frame(width: CleanerPopover.contentWidth)
     .frame(maxHeight: .infinity, alignment: .top)
     .task { await model.refreshDisk() }
-    .onChange(of: model.cleanup?.id) { _, _ in presentedRemovals = [] }
   }
 
   private var cleanerContent: some View {

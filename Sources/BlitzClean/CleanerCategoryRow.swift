@@ -117,17 +117,7 @@ struct CleanerInventoryList: View {
         }
       }
     }
-    .onChange(of: report.visibleItems.map(\.id)) { _, ids in
-      // Retain only confirmed removals long enough to animate; expired scans unmount this view.
-      items = items.filter { ids.contains($0.id) || model.removedItemIDs.contains($0.id) }
-      for item in report.visibleItems {
-        if let index = items.firstIndex(where: { $0.id == item.id }) {
-          items[index] = item
-        } else {
-          items.append(item)
-        }
-      }
-    }
+    .onChange(of: report.visibleItems.map(\.id)) { _, _ in items = report.visibleItems }
     .onChange(of: report.scannedAt) { _, _ in items = report.visibleItems }
   }
 }
@@ -229,7 +219,7 @@ private struct CleanerInventoryItem: View {
         VStack(alignment: .trailing, spacing: 2) {
           Text(ByteText.compact(item.bytes)).font(BlitzType.caption).monospacedDigit()
             .foregroundStyle(.secondary)
-          if model.removingItemID == item.id {
+          if model.removingItemIDs.contains(item.id) {
             ProgressView().controlSize(.mini).accessibilityLabel("Deleting \(item.name)")
           } else {
             Button("Delete", role: .destructive) { Task { await model.deleteItem(item) } }

@@ -145,3 +145,11 @@ reproduction, read [Contributing](../CONTRIBUTING.md) and [Open-source credits](
 Expanded categories show scan failures and running-tool skips, protected data with unknown sizes, and the total of smaller items included in Clean. Cleanup results retain scan notes rather than implying all disk data was removed. Simulator/device-support data, Codex history/runtimes, and Claude scratchpads are explicitly protected. Downloads are personal data outside cleanup scope.
 
 Temporary discovery includes the current user’s macOS temporary directory and `/private/tmp`. Python environments require `pyvenv.cfg` and only known environment entries; Xcode build directories require validated `info.plist` workspace metadata and only generated output entries. Extra files, linked markers, repositories, foreign-owned directories, active files/working directories, and unverified checks are kept. Every entry must be at least 24 hours old even for manual removal. These checks are repeated before deletion. Claude scratchpads are shown for manual review, never automatically deleted.
+
+### Parallel cleanup
+
+Native cleanup runs up to three independent filesystem removals at once. Each target still receives
+its normal identity, activity, ownership and age checks immediately before removal. Overlapping paths
+and shared project scopes cannot run together; Git worktree and Docker operations run exclusively.
+Stopping prevents queued work from starting while already-started removals finish and are recorded.
+Successful rows disappear immediately, without a queued deletion animation; failures remain visible.

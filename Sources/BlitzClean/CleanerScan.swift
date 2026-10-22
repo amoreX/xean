@@ -458,3 +458,36 @@ enum CleanerProjectSafety {
     }
   }
 }
+
+/// Three independent filesystem removals may run together. Shared Git/Docker state is exclusive.
+struct CleanerDeletionResult: Sendable {
+  let item: CleanerItem
+  let win: CleanupWin?
+  let failure: String?
+
+  static func canStart(_ item: CleanerItem, alongside active: [CleanerItem]) -> Bool {
+    func exclusive(_ item: CleanerItem) -> Bool {
+      switch item.target {
+      case .docker, .dockerImages: return true
+      case .artifact(let artifact, _): return artifact.kind == .worktree
+      default: return false
+      }
+    }
+    func scope(_ item: CleanerItem) -> String {
+      switch item.target {
+      case .build(_, let project): return project
+      case .artifact(let artifact, _): return artifact.projectPath
+      default: return item.path
+      }
+    }
+    func overlaps(_ first: String, _ second: String) -> Bool {
+      let a = URL(fileURLWithPath: first).standardizedFileURL.path
+      let b = URL(fileURLWithPath: second).standardizedFileURL.path
+      return a == b || a.hasPrefix(b + "/") || b.hasPrefix(a + "/")
+    }
+    return active.allSatisfy {
+      !exclusive(item) && !exclusive($0)
+        && !overlaps(item.path, $0.path) && !overlaps(scope(item), scope($0))
+    }
+  }
+}

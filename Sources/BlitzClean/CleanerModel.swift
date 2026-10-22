@@ -51,6 +51,7 @@ final class CleanerModel: ObservableObject {
   @Published private(set) var scan: CleanerScan?
   @Published private(set) var categoryScans: [CleanerCategory: CleanerScan] = [:]
   @Published private(set) var loadingCategory: CleanerCategory?
+  @Published private(set) var removingItemIDs: Set<String> = []
   @Published private(set) var removingItemID: String?
   @Published private(set) var removedItemIDs: Set<String> = []
   @Published private(set) var itemFailures: [String: String] = [:]
@@ -348,43 +349,78 @@ final class CleanerModel: ObservableObject {
     var removed: Set<String> = []
     var failures: [String] = []
     var bytes: UInt64 = 0
-    defer { removingItemID = nil }
-    for (index, item) in items.enumerated() {
-      guard !stopRequested, requested == preferences.normalized else {
-        failures.append("Remaining cleanup stopped; untouched items were kept.")
-        break
-      }
-      status = "Cleaning \(index + 1) of \(items.count) · \(item.category.title)…"
-      removingItemID = item.id
-      itemFailures[item.id] = nil
-      do {
-        let win = try await driver.remove(
-          item, preferences: deletionPreferences, automatic: automatic)
-        removed.insert(item.id)
-        if !automatic { removedItemIDs.insert(item.id) }
-        if let runID, cleanup?.id == runID { cleanup?.removedIDs.insert(item.id) }
-        bytes += win.bytes ?? 0
-        func wasRemoved(_ path: String) -> Bool {
-          path == item.path || path.hasPrefix(item.path + "/")
+    defer {
+      removingItemID = nil
+      removingItemIDs = []
+    }
+    await withTaskGroup(of: CleanerDeletionResult.self) { group in
+      var pending = items[...]
+      var active: [CleanerItem] = []
+      var completed = 0
+      var reportedStop = false
+      while !pending.isEmpty || !active.isEmpty {
+        let stopped = stopRequested || requested != preferences.normalized
+        if stopped, !pending.isEmpty {
+          pending = []
+          if !reportedStop {
+            failures.append("Remaining cleanup stopped; untouched items were kept.")
+            reportedStop = true
+          }
         }
-        scan?.items.removeAll { wasRemoved($0.path) }
-        scan?.kept.removeAll { wasRemoved($0.path) }
-        for category in Array(categoryScans.keys) {
-          categoryScans[category]?.items.removeAll { wasRemoved($0.path) }
-          categoryScans[category]?.kept.removeAll { wasRemoved($0.path) }
+        while !pending.isEmpty, active.count < 3,
+          let item = pending.first, CleanerDeletionResult.canStart(item, alongside: active)
+        {
+          pending.removeFirst()
+          active.append(item)
+          itemFailures[item.id] = nil
+          let driver = driver
+          let preferences = deletionPreferences
+          group.addTask {
+            do {
+              let win = try await driver.remove(
+                item, preferences: preferences, automatic: automatic)
+              return CleanerDeletionResult(item: item, win: win, failure: nil)
+            } catch {
+              return CleanerDeletionResult(
+                item: item, win: nil, failure: error.localizedDescription)
+            }
+          }
         }
-        let history = history
-        do {
-          try await Task.detached(priority: .utility) {
-            _ = try history.merge(CleanupLedger(wins: [win]))
-          }.value
-        } catch {
-          failures.append(
-            "Cleanup succeeded, but its history could not be saved: \(error.localizedDescription)")
+        removingItemIDs = Set(active.map(\.id))
+        removingItemID = active.first?.id
+        guard let finished = await group.next() else { break }
+        let item = finished.item
+        active.removeAll { $0.id == item.id }
+        completed += 1
+        status = "Cleaning · \(completed) of \(items.count) finished…"
+        if let win = finished.win {
+          removed.insert(item.id)
+          if !automatic { removedItemIDs.insert(item.id) }
+          if let runID, cleanup?.id == runID { cleanup?.removedIDs.insert(item.id) }
+          bytes += win.bytes ?? 0
+          func wasRemoved(_ path: String) -> Bool {
+            path == item.path || path.hasPrefix(item.path + "/")
+          }
+          scan?.items.removeAll { wasRemoved($0.path) }
+          scan?.kept.removeAll { wasRemoved($0.path) }
+          for category in Array(categoryScans.keys) {
+            categoryScans[category]?.items.removeAll { wasRemoved($0.path) }
+            categoryScans[category]?.kept.removeAll { wasRemoved($0.path) }
+          }
+          let history = history
+          do {
+            try await Task.detached(priority: .utility) {
+              _ = try history.merge(CleanupLedger(wins: [win]))
+            }.value
+          } catch {
+            failures.append(
+              "Cleanup succeeded, but its history could not be saved: \(error.localizedDescription)"
+            )
+          }
+        } else if let failure = finished.failure {
+          itemFailures[item.id] = failure
+          failures.append("\(item.path): \(failure)")
         }
-      } catch {
-        itemFailures[item.id] = error.localizedDescription
-        failures.append("\(item.path): \(error.localizedDescription)")
       }
     }
     await refreshDisk()
