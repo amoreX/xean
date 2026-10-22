@@ -50,6 +50,22 @@ enum TemporaryCleanup {
     return URL(fileURLWithPath: workspace).deletingLastPathComponent().path
   }
 
+  static func commandReferences(_ command: String, directory: String) -> Bool {
+    func normalized(_ value: String) -> String {
+      value.replacingOccurrences(of: "/private/tmp/", with: "/tmp/")
+        .replacingOccurrences(of: "/private/var/", with: "/var/")
+    }
+    return normalized(command).contains(normalized(directory) + "/")
+  }
+
+  static func validateActivity(at path: String) throws {
+    // Python can close imported files while still relying on the environment for later imports.
+    let processes = CleanupActivity.runCommand(
+      .init(executable: "/bin/ps", arguments: ["-axo", "comm=,args="], timeout: 5))
+    guard processes.status == 0, !processes.output.isEmpty else { throw CacheCleanError.unverified }
+    if commandReferences(processes.output, directory: path) { throw CacheCleanError.busy }
+  }
+
   static func discover(roots: [String], categories: Set<CleanerCategory>) -> (
     rules: [(CleanerCategory, CacheRule)], kept: [CleanerKeptItem]
   ) {

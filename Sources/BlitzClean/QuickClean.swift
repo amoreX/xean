@@ -257,11 +257,15 @@ enum CacheCleaner {
           continue
         }
       }
+      var recentTestFolders = 0
       for child in children.sorted() where rule.entryName == nil || child == rule.entryName {
         guard !Task.isCancelled else { break }
         let path = rule.path + "/" + child
         guard rule.accepts(path) else { continue }
         do {
+          if rule.kind == .temporaryEnvironment || rule.kind == .temporaryBuild {
+            try TemporaryCleanup.validateActivity(at: path)
+          }
           let contents = try tree(.init(path: path))
           let candidate = CacheCandidate(path: path, rule: rule, tree: contents)
           try validateLocation(candidate)
@@ -271,7 +275,9 @@ enum CacheCleaner {
                 < request.date.addingTimeInterval(-Double(rule.kind.minimumAgeDays) * 86_400),
             contents.bytes > 0
           else {
-            if rule.kind.alwaysRequiresAge {
+            if rule.kind == .staleTestDirectory {
+              recentTestFolders += 1
+            } else if rule.kind.alwaysRequiresAge {
               notes.append("\(child): kept until every file is at least 24 hours old.")
             }
             continue
@@ -283,6 +289,9 @@ enum CacheCleaner {
         } catch {
           notes.append("\(rule.title) / \(child): \(error.localizedDescription)")
         }
+      }
+      if recentTestFolders > 0 {
+        notes.append("\(recentTestFolders) recent Tickle test folders kept (24-hour minimum).")
       }
     }
     return .init(candidates: candidates.sorted { $0.tree.bytes > $1.tree.bytes }, notes: notes)
@@ -305,6 +314,9 @@ enum CacheCleaner {
     guard owners.isDisjoint(with: candidate.rule.owners) else { throw CacheCleanError.busy }
     if candidate.rule.checksRootActivity { try validateInactive(candidate.rule.path) }
     try validateInactive(candidate.path)
+    if candidate.rule.kind == .temporaryEnvironment || candidate.rule.kind == .temporaryBuild {
+      try TemporaryCleanup.validateActivity(at: candidate.path)
+    }
     if candidate.rule.kind == .temporaryBuild,
       let workspace = TemporaryCleanup.workspace(at: candidate.path)
     {

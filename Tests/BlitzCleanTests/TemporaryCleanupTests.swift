@@ -4,6 +4,35 @@ import Testing
 @testable import BlitzClean
 
 struct TemporaryCleanupTests {
+  @Test func recentTestFoldersProduceOneSummaryInsteadOfHundredsOfRows() throws {
+    let fixture = try CleanerFixture()
+    defer { fixture.remove() }
+    for suffix in ["aaaaaa", "bbbbbb", "cccccc"] {
+      try fixture.write("tickle-desktop-test-" + suffix + "/payload", "fixture")
+    }
+    let scan = CacheCleaner.scan(
+      .init(
+        rules: [CleanerCatalog.staleTestRule(root: fixture.path)], date: .now, respectsAge: false))
+    #expect(scan.candidates.isEmpty)
+    #expect(scan.notes == ["3 recent Tickle test folders kept (24-hour minimum)."])
+  }
+
+  @Test func runningEnvironmentPathsRespectMacOSTemporaryAliases() {
+    #expect(
+      TemporaryCleanup.commandReferences(
+        "/tmp/env/bin/python server.py", directory: "/private/tmp/env"))
+    #expect(
+      TemporaryCleanup.commandReferences(
+        "/var/folders/user/T/env/bin/python service.py",
+        directory: "/private/var/folders/user/T/env"))
+    #expect(
+      !TemporaryCleanup.commandReferences(
+        "/tmp/env-other/bin/python server.py", directory: "/private/tmp/env"))
+    #expect(
+      !TemporaryCleanup.commandReferences(
+        "/usr/bin/python3 server.py", directory: "/private/tmp/env"))
+  }
+
   @Test func findsOnlyGeneratedEnvironmentsAndBuildsAndKeepsScratchWork() throws {
     let fixture = try CleanerFixture()
     defer { fixture.remove() }
