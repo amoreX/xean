@@ -7,12 +7,14 @@ enum CleanupDataKind: Sendable {
   case diagnosticReport
   case temporaryEnvironment, temporaryBuild
   case staleTestDirectory
+  case pythonEnvironment, browserDownload, updaterCache
 
   var alwaysRequiresAge: Bool {
     self == .staleTestDirectory || self == .temporaryEnvironment || self == .temporaryBuild
+      || self == .pythonEnvironment || self == .browserDownload || self == .updaterCache
   }
 
-  var minimumAgeDays: Int { self == .diagnosticReport ? 30 : 1 }
+  var minimumAgeDays: Int { self == .diagnosticReport ? 30 : self == .pythonEnvironment ? 7 : 1 }
 }
 
 struct CacheRule: Sendable {
@@ -53,6 +55,16 @@ struct CacheRule: Sendable {
 
   func accepts(_ path: String) -> Bool {
     if let entryName, URL(fileURLWithPath: path).lastPathComponent != entryName { return false }
+    if kind == .pythonEnvironment {
+      return PythonEnvironmentCleanup.isReproducible(path)
+    }
+    if kind == .browserDownload {
+      let name = URL(fileURLWithPath: path).lastPathComponent
+      return ["chromium-", "chromium_headless_shell-", "firefox-", "webkit-", "ffmpeg-"].contains {
+        let suffix = name.dropFirst($0.count)
+        return name.hasPrefix($0) && !suffix.isEmpty && suffix.allSatisfy(\.isNumber)
+      }
+    }
     if kind == .temporaryEnvironment || kind == .temporaryBuild {
       return TemporaryCleanup.kind(at: path) == kind
     }
@@ -274,13 +286,19 @@ enum CacheCleaner {
             if rule.kind == .staleTestDirectory {
               recentTestFolders += 1
             } else if rule.kind.alwaysRequiresAge {
-              notes.append("\(child): kept until every file is at least 24 hours old.")
+              notes.append(
+                "\(child): kept until every file is at least \(rule.kind.minimumAgeDays * 24) hours old."
+              )
             }
             continue
           }
-          if rule.kind == .temporaryEnvironment || rule.kind == .temporaryBuild {
+          if rule.kind == .temporaryEnvironment || rule.kind == .temporaryBuild
+            || rule.kind == .browserDownload
+            || rule.kind == .updaterCache
+          {
             try TemporaryCleanup.validateActivity(at: path)
           }
+          if rule.kind == .pythonEnvironment { try PythonEnvironmentCleanup.validateActivity(path) }
           let contents = try tree(.init(path: path))
           let candidate = CacheCandidate(path: path, rule: rule, tree: contents)
           try validateLocation(candidate)
@@ -293,7 +311,9 @@ enum CacheCleaner {
             if rule.kind == .staleTestDirectory {
               recentTestFolders += 1
             } else if rule.kind.alwaysRequiresAge {
-              notes.append("\(child): kept until every file is at least 24 hours old.")
+              notes.append(
+                "\(child): kept until every file is at least \(rule.kind.minimumAgeDays * 24) hours old."
+              )
             }
             continue
           }
@@ -329,13 +349,19 @@ enum CacheCleaner {
     guard owners.isDisjoint(with: candidate.rule.owners) else { throw CacheCleanError.busy }
     if candidate.rule.checksRootActivity { try validateInactive(candidate.rule.path) }
     try validateInactive(candidate.path)
-    if candidate.rule.kind == .temporaryEnvironment || candidate.rule.kind == .temporaryBuild {
+    if candidate.rule.kind == .temporaryEnvironment || candidate.rule.kind == .temporaryBuild
+      || candidate.rule.kind == .browserDownload
+      || candidate.rule.kind == .updaterCache
+    {
       try TemporaryCleanup.validateActivity(at: candidate.path)
     }
     if candidate.rule.kind == .temporaryBuild,
       let workspace = TemporaryCleanup.workspace(at: candidate.path)
     {
       try CleanerProjectSafety.validateActivity(workspace)
+    }
+    if candidate.rule.kind == .pythonEnvironment {
+      try PythonEnvironmentCleanup.validateActivity(candidate.path)
     }
     let current = try tree(.init(path: candidate.path))
     guard current == candidate.tree else { throw CacheCleanError.changed }

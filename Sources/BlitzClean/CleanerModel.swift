@@ -193,7 +193,9 @@ final class CleanerModel: ObservableObject {
     invalidateCategories(Set(categoryScans.keys))
     scan = nil
     status = "Refreshing scans…"
-    let projectCategories = requested.categories.intersection([.builds, .dependencies, .worktrees])
+    let projectCategories = requested.categories.intersection([
+      .builds, .dependencies, .worktrees, .pythonEnvironments,
+    ])
     let groups = [requested.categories.subtracting(projectCategories), projectCategories]
     for categories in groups where !categories.isEmpty {
       guard !stopRequested, sameScope(original, preferences) else { break }

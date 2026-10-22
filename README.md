@@ -174,3 +174,22 @@ while previewing; press Ctrl+C to stop. No package install or build step is need
 xean is an [MIT-licensed](LICENSE) fork of [BlitzClean](https://github.com/blitzreels/blitzclean) by BlitzReels.
 Original copyright and third-party notices are preserved. [Open-source credits](OPEN_SOURCE_BASES.md)
 explain the inherited code, bundled dependencies, and Cuelume sound assets.
+
+### Expanded cleanup coverage
+
+Project discovery includes Downloads, local tool projects in `~/.local/share`, Codex experiment folders,
+and Superconductor projects. Existing dependency/worktree safety checks still apply; arbitrary downloaded
+files are never cleanup targets. Temporary Xcode build folders may include generated `TestResults`.
+
+“Other app caches” covers Slack and Linear cache folders plus WhatsApp's staged updater installations.
+Zen's Mozilla updater cache is included under Browser caches. Playwright browser downloads are included
+under Package caches; browsers may need reinstalling with `playwright install`. Updater and browser-download
+cleanup requires a 24-hour minimum and checks for running tools and open files. Profiles, messages,
+Playwright registrations, simulator devices and iPhone support data stay protected.
+
+“Python environments” is a separate opt-in category for `.venv`/`venv` directories in discovered project
+locations. It requires verified generated-environment metadata, a regular owned dependency manifest,
+at least seven days of age even for manual cleanup, no active interpreter or project, and the normal
+identity/ownership/internal-volume checks again before deletion. In Git projects, environments must be
+ignored and contain no tracked files. Unverified environments appear as
+protected items with reasons; installed standalone runtimes are not included.

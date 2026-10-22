@@ -189,13 +189,17 @@ enum CleanerScanner {
       }
     }
 
-    if !preferences.categories.isDisjoint(with: [.worktrees, .builds, .dependencies]) {
+    if !preferences.categories.isDisjoint(with: [
+      .worktrees, .builds, .dependencies, .pythonEnvironments,
+    ]) {
       let roots =
         CleanerCatalog.roots(home: home) + preferences.projectRoots
         + DeveloperLocations.additionalProjectRoots + WorkspacePreferences.load().map(\.directory)
       let previousNoteCount = result.notes.count
       scanProjects(roots: roots, preferences: preferences, automatic: automatic, result: &result)
-      for category in preferences.categories.intersection([.worktrees, .builds, .dependencies]) {
+      for category in preferences.categories.intersection([
+        .worktrees, .builds, .dependencies, .pythonEnvironments,
+      ]) {
         result.categoryNotes[category, default: []] += result.notes.dropFirst(previousNoteCount)
       }
     }
@@ -323,6 +327,36 @@ enum CleanerScanner {
               .init(category: .worktrees, path: record.path, reason: error.localizedDescription))
             result.notes.append("\(record.path): \(error.localizedDescription)")
           }
+        }
+      }
+    }
+    if preferences.categories.contains(.pythonEnvironments) {
+      for path in discovery.pythonEnvironments {
+        guard !Task.isCancelled else { return }
+        guard PythonEnvironmentCleanup.isReproducible(path) else {
+          result.kept.append(
+            .init(
+              category: .pythonEnvironments, path: path,
+              reason:
+                "Kept: environment metadata or dependency manifest could not be verified. Review it manually."
+            ))
+          continue
+        }
+        let rule = PythonEnvironmentCleanup.rule(path)
+        let report = CacheCleaner.scan(.init(rules: [rule], date: .now, respectsAge: true))
+        result.categoryNotes[.pythonEnvironments, default: []] += report.notes
+        for candidate in report.candidates {
+          result.items.append(
+            .init(
+              category: .pythonEnvironments, path: path, bytes: candidate.tree.bytes,
+              target: .cache(candidate)))
+        }
+        if report.candidates.isEmpty {
+          result.kept.append(
+            .init(
+              category: .pythonEnvironments, path: path,
+              reason: report.notes.first
+                ?? "Kept: environment is recent, active or could not be verified."))
         }
       }
     }

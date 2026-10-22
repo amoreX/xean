@@ -2,7 +2,7 @@ import Foundation
 
 enum CleanerCategory: String, CaseIterable, Codable, Sendable, Identifiable {
   case claude, codex, superconductor, editors, packages, browsers, builds, dependencies, docker,
-    worktrees, dockerImages
+    worktrees, dockerImages, appCaches, pythonEnvironments
 
   var id: String { rawValue }
   var title: String {
@@ -16,6 +16,8 @@ enum CleanerCategory: String, CaseIterable, Codable, Sendable, Identifiable {
     case .builds: "Build files"
     case .dependencies: "Project dependencies"
     case .docker: "Docker build cache"
+    case .appCaches: "Other app caches"
+    case .pythonEnvironments: "Python environments"
     case .dockerImages: "Unused Docker images"
     case .worktrees: "Old worktrees"
     }
@@ -32,6 +34,8 @@ enum CleanerCategory: String, CaseIterable, Codable, Sendable, Identifiable {
     case .builds: "Build output and stale temporary builds/tests"
     case .dependencies: "Inactive node_modules with a lockfile"
     case .docker: "Unused build cache; containers and volumes stay"
+    case .appCaches: "WhatsApp updates, Slack and Linear caches"
+    case .pythonEnvironments: "Inactive, reproducible environments older than 7 days"
     case .dockerImages: "Unused images older than 24h; local builds may need rebuilding"
     case .worktrees: "Clean, merged, inactive Git worktrees"
     }
@@ -137,7 +141,8 @@ enum CleanerCatalog {
     [
       "dev", "Developer", "Projects", "Code", "Documents/GitHub", "Documents/ChatGPT",
       ".codex/worktrees", ".claude/worktrees", ".cursor/worktrees", "conductor/workspaces",
-      ".conductor/workspaces", ".superconductor/worktrees",
+      ".conductor/workspaces", ".superconductor/worktrees", "Downloads", ".local/share",
+      ".codex/experiments", "superconductor/projects",
     ]
     .map { home + "/" + $0 }
   }
@@ -194,6 +199,11 @@ enum CleanerCatalog {
         + [rule("Library/Caches/fed10", owners: ["fed10", "fed10 Helper"])]
     case .packages:
       return [
+        CacheRule(
+          title: "Playwright browser downloads", path: home + "/Library/Caches/ms-playwright",
+          recipe: "Reinstall with playwright install before running browser tests.",
+          owners: ["playwright"],
+          kind: .browserDownload, checksRootActivity: true),
         rule(".npm/_cacache", owners: ["npm", "npx", "pnpm"]),
         rule(".npm/_npx", owners: ["npm", "npx"]),
         rule("Library/Caches/Yarn", owners: ["yarn"]),
@@ -205,7 +215,30 @@ enum CleanerCatalog {
       ]
     case .browsers:
       return SystemDataCatalog.rules(home: home).filter { $0.kind == .cache }
-        + [rule("Library/Caches/zen", owners: ["zen", "Zen", "Zen Helper"])]
+        + [
+          rule("Library/Caches/zen", owners: ["zen", "Zen", "Zen Helper"]),
+          CacheRule(
+            title: "Zen updater cache",
+            path: home + "/Library/Caches/Mozilla/updates/Applications/Zen",
+            recipe: "Zen downloads updates again.", owners: ["zen", "Zen", "updater"],
+            kind: .updaterCache,
+            checksRootActivity: true),
+        ]
+    case .appCaches:
+      return electron("Slack", owners: ["Slack", "Slack Helper"])
+        + electron("Linear", owners: ["Linear", "Linear Helper"])
+        + [
+          rule(
+            "Library/Application Support/Slack/Service Worker/CacheStorage",
+            owners: ["Slack", "Slack Helper"]),
+          CacheRule(
+            title: "WhatsApp updater cache",
+            path: home
+              + "/Library/Caches/net.whatsapp.WhatsApp/org.sparkle-project.Sparkle/Installation",
+            recipe: "WhatsApp downloads updates again. Messages stay.",
+            owners: ["WhatsApp", "Updater", "Autoupdate"], kind: .updaterCache,
+            checksRootActivity: true),
+        ]
     case .builds:
       var rules = [
         rule(
@@ -219,7 +252,7 @@ enum CleanerCatalog {
         rules.append(staleTestRule(root: temporaryRoot))
       }
       return rules
-    case .dependencies, .docker, .dockerImages, .worktrees: return []
+    case .dependencies, .docker, .dockerImages, .worktrees, .pythonEnvironments: return []
     }
   }
 }

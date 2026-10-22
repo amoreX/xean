@@ -23,7 +23,7 @@ enum TemporaryCleanup {
       names.isSubset(of: [
         "Build", "Index.noindex", "Logs", "ModuleCache.noindex", "CompilationCache.noindex",
         "SDKExplicitPrecompiledModules", "SDKStatCaches.noindex", "info.plist",
-        "SymbolCache.noindex", "TextIndex.noindex",
+        "SymbolCache.noindex", "TextIndex.noindex", "TestResults",
       ]),
       workspace(at: path) != nil
     {

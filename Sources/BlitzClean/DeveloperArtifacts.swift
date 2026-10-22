@@ -34,6 +34,7 @@ struct DeveloperDiscovery: Sendable {
   let dependencies: [String]
   let limited: Bool
   var projects: [String] = []
+  var pythonEnvironments: [String] = []
 }
 
 enum DeveloperArtifactScanner {
@@ -56,6 +57,7 @@ enum DeveloperArtifactScanner {
     var repositories: Set<String> = []
     var dependencies: Set<String> = []
     var projects: Set<String> = []
+    var pythonEnvironments: Set<String> = []
     var visited: Set<String> = []
     var visitedEntries = 0
     var limited = false
@@ -123,7 +125,11 @@ enum DeveloperArtifactScanner {
           } else if ["package.json", "Cargo.toml", "Package.swift"].contains(name), type != DT_DIR {
             projects.insert(directoryPath)
           } else if type == DT_DIR {
-            if name == "node_modules" {
+            if [".venv", "venv"].contains(name),
+              FileManager.default.fileExists(atPath: child + "/pyvenv.cfg")
+            {
+              pythonEnvironments.insert(child)
+            } else if name == "node_modules" {
               dependencies.insert(child)
             } else if !ignored.contains(name) {
               // Package metadata is needed only for directories, not every source file.
@@ -149,7 +155,8 @@ enum DeveloperArtifactScanner {
     }
     return .init(
       repositories: repositories.sorted(), dependencies: dependencies.sorted(),
-      limited: limited, projects: projects.sorted())
+      limited: limited, projects: projects.sorted(), pythonEnvironments: pythonEnvironments.sorted()
+    )
   }
 
   struct DependencyRequest: Sendable {
