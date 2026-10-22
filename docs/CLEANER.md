@@ -21,8 +21,7 @@ reason. Removal is permanent; xean does not provide an undo or move these items 
 ## Category lists and scanning
 
 Dropdowns show eligible and protected entries measured at **50 MB or larger**, with names, paths, sizes,
-and worktree branches where available. Unmeasured entries and smaller items are hidden. This filter only
-controls the dropdown: bulk cleanup can remove smaller eligible items too.
+and worktree branches where available. Protected entries with unknown sizes remain visible. Smaller eligible items have a count and total, and scan skips show their reasons. Bulk cleanup includes those smaller eligible items.
 
 Completed manual category scans are reusable for **30 seconds after completion**. Expired, missing, or
 invalidated lists clear their old contents before showing Checking… and scanning again. Clean shares those
@@ -61,22 +60,24 @@ not open result screens. Both switches off means manual cleanup only. Checks do 
 | Codex | Supported macOS caches and named renderer/GPU caches in its desktop profile; sessions stay |
 | Superconductor | Supported macOS and named renderer/GPU caches |
 | Coding editors | Cursor, VS Code, Windsurf, Zed, and fed10 cache locations |
-| Package caches | npm, Yarn, pip, uv, Bun, and Homebrew download caches |
+| Package caches | npm (including npx), Yarn, pip, uv, Bun, and Homebrew download caches; verified temporary Python environments in macOS temporary directories |
 | Browser caches | Supported Safari, Chrome, Firefox, and Zen cache locations |
-| Build files | Xcode DerivedData and supported web/Swift/Rust output in discovered projects, including nested packages; project output requires a matching manifest, Git ignore rule, and no tracked files; also stale `tickle-desktop-test-XXXXXX` directories in the current user’s macOS temporary directory |
+| Build files | Xcode DerivedData and supported web/Swift/Rust output in discovered projects, including nested packages; project output requires a matching manifest, Git ignore rule, and no tracked files; also verified temporary Xcode build output and stale `tickle-desktop-test-XXXXXX` directories in the current user’s macOS temporary directory |
 | Project dependencies | Inactive `node_modules` with an exact reinstall lockfile; package links are supported without following destinations |
 | Docker build cache | Unused builder cache through a verified local Unix socket; images, containers, and volumes remain |
+| Unused Docker images | Separate opt-in: images older than 24 hours that no container references, including tagged local images; local images may need rebuilding. Containers and volumes stay |
 | Old worktrees | Clean, merged, inactive Git-linked checkouts; removal uses `git worktree remove` without force and leaves branches intact |
 
 Claude Code, Codex, Superconductor, editors, packages, and builds start selected. Browsers, dependencies,
-Docker, and worktrees start unselected. Previous selections are retained.
+Docker, unused Docker images, and worktrees start unselected. Previous selections are retained.
 
 | Age policy | Manual Clean / Delete | Automatic cleanup |
 | --- | --- | --- |
 | Caches and build output | No age cutoff | At least 24 hours |
-| Tickle temporary test folders | At least 24 hours | At least 24 hours |
+| Temporary environments, Xcode builds, and Tickle test folders | At least 24 hours | At least 24 hours |
 | Project dependencies | No age cutoff | At least seven days |
 | Docker builder cache | No age filter | At least 24 hours; the displayed estimate can include newer cache that stays |
+| Unused Docker images | At least 24 hours | At least 24 hours |
 | Worktrees | No age cutoff | Configured minimum; age includes file changes, creation, and Git metadata activity |
 
 Every deletion rechecks identity, metadata, location, and activity. Automatic operations also recheck age.
@@ -125,8 +126,7 @@ native login-item service.
 unreadable, or protected by project/Git rules. Check the inline reason. Close the owning tool before
 trying again; size alone does not establish eligibility.
 
-**Why is a category empty when it contains files?** The dropdown hides items below 50 MB and entries
-without a verified size. The eligible bulk-cleanup set can differ from the visible list.
+**Why does a category contain files but no cleanup entries?** It may contain protected data, running-tool caches, or files outside the supported rules. The dropdown shows scan notes and protected locations; smaller eligible entries are summarized rather than listed individually.
 
 **Why does a new scan take time?** Large trees are traversed completely. A scan within the 30-second cache
 window is reused, but fresh deletion validation is still required. Auto-clean always starts a fresh scan.
@@ -139,3 +139,9 @@ inherited. See [compatibility names](ARCHITECTURE.md#compatibility-names).
 
 For local data and permissions, read [Privacy](PRIVACY.md). For fixture-based development and sound asset
 reproduction, read [Contributing](../CONTRIBUTING.md) and [Open-source credits](../OPEN_SOURCE_BASES.md).
+
+### What is kept and why
+
+Expanded categories show scan failures and running-tool skips, protected data with unknown sizes, and the total of smaller items included in Clean. Cleanup results retain scan notes rather than implying all disk data was removed. Simulator/device-support data, Codex history/runtimes, and Claude scratchpads are explicitly protected. Downloads are personal data outside cleanup scope.
+
+Temporary discovery includes the current user’s macOS temporary directory and `/private/tmp`. Python environments require `pyvenv.cfg` and only known environment entries; Xcode build directories require validated `info.plist` workspace metadata and only generated output entries. Extra files, linked markers, repositories, foreign-owned directories, active files/working directories, and unverified checks are kept. Every entry must be at least 24 hours old even for manual removal. These checks are repeated before deletion. Claude scratchpads are shown for manual review, never automatically deleted.

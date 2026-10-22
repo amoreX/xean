@@ -6,6 +6,34 @@ import Testing
 
 @MainActor
 struct CleanerRenderTests {
+  @Test func rendersSkippedLocationsAndSmallItemsWhenRequested() async throws {
+    guard let output = ProcessInfo.processInfo.environment["BLITZCLEAN_DESIGN_DIR"] else { return }
+    let directory = URL(fileURLWithPath: output)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let fixture = try CleanerFixture()
+    defer { fixture.remove() }
+    let defaults = try #require(UserDefaults(suiteName: "coverage-render-\(UUID())"))
+    let model = CleanerModel(
+      defaults: defaults, driver: FixtureCleanerDriver(),
+      history: .init(url: URL(fileURLWithPath: fixture.path + "/history.json")))
+    let report = CleanerScan(
+      items: [
+        .init(category: .codex, path: "/Example/cache/small", bytes: 12_000_000, target: .docker)
+      ],
+      kept: [
+        .init(
+          category: .codex, path: "/Example/.codex/sessions",
+          reason: "Conversation history is kept; it is not an app cache.")
+      ],
+      notes: [
+        "Codex (~/Library/Caches/com.openai.codex): app or package manager is running; kept. Close it and scan again."
+      ])
+    try await render(
+      CleanerInventoryList(model: model, report: report).padding(18),
+      size: .init(width: 380, height: 350),
+      to: directory.appendingPathComponent("coverage-notes.png"))
+  }
+
   @Test func rendersCleanerDialogWhenRequested() async throws {
     guard let output = ProcessInfo.processInfo.environment["BLITZCLEAN_DESIGN_DIR"] else { return }
     let directory = URL(fileURLWithPath: output)

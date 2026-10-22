@@ -5,7 +5,12 @@ import Foundation
 enum CleanupDataKind: Sendable {
   case cache
   case diagnosticReport
+  case temporaryEnvironment, temporaryBuild
   case staleTestDirectory
+
+  var alwaysRequiresAge: Bool {
+    self == .staleTestDirectory || self == .temporaryEnvironment || self == .temporaryBuild
+  }
 
   var minimumAgeDays: Int { self == .diagnosticReport ? 30 : 1 }
 }
@@ -17,6 +22,7 @@ struct CacheRule: Sendable {
   let owners: Set<String>
   let kind: CleanupDataKind
   var checksRootActivity = false
+  var entryName: String? = nil
 
   static var standard: [Self] {
     let home = FileManager.default.homeDirectoryForCurrentUser.path
@@ -46,6 +52,10 @@ struct CacheRule: Sendable {
   }
 
   func accepts(_ path: String) -> Bool {
+    if let entryName, URL(fileURLWithPath: path).lastPathComponent != entryName { return false }
+    if kind == .temporaryEnvironment || kind == .temporaryBuild {
+      return TemporaryCleanup.kind(at: path) == kind
+    }
     if kind == .staleTestDirectory {
       let name = URL(fileURLWithPath: path).lastPathComponent
       let prefix = "tickle-desktop-test-"
@@ -230,22 +240,24 @@ enum CacheCleaner {
       guard FileManager.default.fileExists(atPath: rule.path) else { continue }
       guard !Task.isCancelled else { break }
       guard owners.isDisjoint(with: rule.owners) else {
-        notes.append("\(rule.title): its tools are running; kept.")
+        notes.append(
+          "\(rule.title) (\(rule.path)): app or package manager is running; kept. Close it and scan again."
+        )
         continue
       }
       guard ReviewFile.canonicalPath(rule.path) == rule.path,
         let children = try? FileManager.default.contentsOfDirectory(atPath: rule.path)
       else {
-        notes.append("\(rule.title): folder could not be read or is a link.")
+        notes.append("\(rule.title) (\(rule.path)): folder could not be read or is a link.")
         continue
       }
       if rule.checksRootActivity {
         do { try validateInactive(rule.path) } catch {
-          notes.append("\(rule.title): \(error.localizedDescription)")
+          notes.append("\(rule.title) (\(rule.path)): \(error.localizedDescription)")
           continue
         }
       }
-      for child in children.sorted() {
+      for child in children.sorted() where rule.entryName == nil || child == rule.entryName {
         guard !Task.isCancelled else { break }
         let path = rule.path + "/" + child
         guard rule.accepts(path) else { continue }
@@ -254,11 +266,19 @@ enum CacheCleaner {
           let candidate = CacheCandidate(path: path, rule: rule, tree: contents)
           try validateLocation(candidate)
           guard
-            (!request.respectsAge && rule.kind != .staleTestDirectory)
+            (!request.respectsAge && !rule.kind.alwaysRequiresAge)
               || contents.newest
                 < request.date.addingTimeInterval(-Double(rule.kind.minimumAgeDays) * 86_400),
             contents.bytes > 0
-          else { continue }
+          else {
+            if rule.kind.alwaysRequiresAge {
+              notes.append("\(child): kept until every file is at least 24 hours old.")
+            }
+            continue
+          }
+          if rule.kind == .temporaryBuild, let workspace = TemporaryCleanup.workspace(at: path) {
+            try CleanerProjectSafety.validateActivity(workspace)
+          }
           candidates.append(candidate)
         } catch {
           notes.append("\(rule.title) / \(child): \(error.localizedDescription)")
@@ -285,10 +305,15 @@ enum CacheCleaner {
     guard owners.isDisjoint(with: candidate.rule.owners) else { throw CacheCleanError.busy }
     if candidate.rule.checksRootActivity { try validateInactive(candidate.rule.path) }
     try validateInactive(candidate.path)
+    if candidate.rule.kind == .temporaryBuild,
+      let workspace = TemporaryCleanup.workspace(at: candidate.path)
+    {
+      try CleanerProjectSafety.validateActivity(workspace)
+    }
     let current = try tree(.init(path: candidate.path))
     guard current == candidate.tree else { throw CacheCleanError.changed }
     guard
-      (!respectsAge && candidate.rule.kind != .staleTestDirectory)
+      (!respectsAge && !candidate.rule.kind.alwaysRequiresAge)
         || current.newest
           < Date.now.addingTimeInterval(-Double(candidate.rule.kind.minimumAgeDays) * 86_400)
     else {

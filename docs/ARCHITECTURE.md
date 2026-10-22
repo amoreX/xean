@@ -94,6 +94,7 @@ threshold and never invoke the notification framework.
 | `CleanerPolicy.swift` | Category catalog, supported cache roots, default project roots, normalized thresholds and age settings |
 | `CleanerScan.swift` | `CleanerItem`, `CleanerKeptItem`, `CleanerScan`, `NativeCleanerDriver`, scanner, and project safety checks |
 | `QuickClean.swift` / `CacheCleaner` | Allowlisted cache traversal, tree fingerprinting, identity/activity/age revalidation, and removal |
+| `TemporaryCleanup.swift` | Ownership-aware temporary discovery, environment/build metadata classification, and protected scratchpad inventory |
 | `DeveloperArtifacts.swift` | Project, dependency, and build-output discovery |
 | `DeveloperArtifactCleanup.swift` | Dependency and worktree validation and removal |
 | `GitWorktrees.swift` | Local checkout identity, branch/merge status, dirty/ignored files, locks, and primary-checkout protection |
@@ -174,3 +175,5 @@ upstream code compatibility and tests. Their presence does not make them xean fe
 
 See [Contributing](../CONTRIBUTING.md) for focused checks, [Design](DESIGN.md) for UI rules, and
 [Releasing](RELEASING.md) before distributing binaries.
+
+Category scans retain scoped diagnostic notes for inventory and completion. Unknown-size protected entries remain visible, and small eligible entries have a total instead of an empty-state message. Temporary environments/builds use exact-entry rules and mandatory age validation. Unused Docker images have a separate opt-in category and an age-limited local Docker image prune; the existing builder-cache action is unchanged.

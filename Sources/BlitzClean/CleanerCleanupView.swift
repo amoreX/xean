@@ -47,7 +47,7 @@ struct CleanerCleanupView: View {
   }
 
   private func completion(_ result: CleanerOutcome) -> some View {
-    let complete = result.kept == 0
+    let complete = result.kept == 0 && cleanup.protectedCount == 0 && cleanup.notes.isEmpty
     let nothingToClean = cleanup.items.isEmpty
     return VStack(spacing: 0) {
       Spacer(minLength: 24)
@@ -72,13 +72,29 @@ struct CleanerCleanupView: View {
         )
         .foregroundStyle(.secondary)
       }
+      if !nothingToClean, let gain = result.availableGain {
+        Text("Available space increased by \(ByteText.full(gain)) during cleanup.")
+          .font(BlitzType.caption).foregroundStyle(.secondary).padding(.top, 6)
+      }
       if cleanup.protectedCount > 0 {
         Text(
           "\(cleanup.protectedCount) protected \(cleanup.protectedCount == 1 ? "item" : "items") kept"
         )
         .foregroundStyle(.secondary).padding(.top, 4)
       }
-      if !complete {
+      if !cleanup.notes.isEmpty {
+        DisclosureGroup("Skipped locations and scan notes (\(cleanup.notes.count))") {
+          ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+              ForEach(cleanup.notes, id: \.self) { note in
+                Text(note.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+                  .font(BlitzType.caption).frame(maxWidth: .infinity, alignment: .leading)
+              }
+            }
+          }.frame(maxHeight: 130)
+        }.padding(.top, 12)
+      }
+      if result.kept > 0 {
         ScrollView {
           VStack(spacing: 16) {
             ForEach(cleanup.items.filter { !cleanup.removedIDs.contains($0.id) }) { item in

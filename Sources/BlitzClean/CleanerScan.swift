@@ -5,6 +5,7 @@ enum CleanerTarget: Sendable {
   case build(CacheCandidate, project: String)
   case artifact(DeveloperArtifact, tree: CacheTree)
   case docker
+  case dockerImages
 }
 
 struct CleanerItem: Identifiable, Sendable {
@@ -34,11 +35,26 @@ struct CleanerScan: Sendable {
   var items: [CleanerItem] = []
   var kept: [CleanerKeptItem] = []
   var notes: [String] = []
+  var categoryNotes: [CleanerCategory: [String]] = [:]
   var scannedAt = Date.now
+
+  var inventorySummary: String? {
+    let small = items.filter { $0.bytes < Self.minimumVisibleBytes }
+    if !small.isEmpty {
+      let bytes = small.reduce(UInt64(0)) { $0 + $1.bytes }
+      return
+        "\(small.count) smaller \(small.count == 1 ? "item" : "items") · \(ByteText.compact(bytes)) included in Clean."
+    }
+    if items.isEmpty && kept.isEmpty {
+      return notes.isEmpty
+        ? "No eligible data in the supported locations." : "Some locations were skipped."
+    }
+    return nil
+  }
 
   var visibleItems: [CleanerItem] { items.filter { $0.bytes >= Self.minimumVisibleBytes } }
   var visibleKept: [CleanerKeptItem] {
-    kept.filter { ($0.bytes ?? 0) >= Self.minimumVisibleBytes }
+    kept.filter { $0.bytes == nil || ($0.bytes ?? 0) >= Self.minimumVisibleBytes }
   }
 }
 
@@ -93,6 +109,13 @@ struct NativeCleanerDriver: CleanerDriver {
         }
         win.bytes = item.bytes
         return win
+      case .dockerImages:
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let before = CleanupVolume.read(home)
+        _ = try DockerStorageService().cleanUnusedImages()
+        return .init(
+          id: UUID().uuidString, date: .now, title: "Cleaned unused Docker images",
+          paths: ["docker://local/images"], before: before, after: CleanupVolume.read(home))
       case .docker:
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let before = CleanupVolume.read(home)
@@ -120,32 +143,80 @@ enum CleanerScanner {
     let preferences = preferences.normalized
     let home = FileManager.default.homeDirectoryForCurrentUser.path
     var result = CleanerScan()
-    let rules = CleanerCategory.allCases.filter(preferences.categories.contains).flatMap {
+    let protectedLocations: [(CleanerCategory, String, String)] = [
+      (.codex, home + "/.codex/sessions", "Conversation history is kept; it is not an app cache."),
+      (
+        .codex, home + "/.codex/packages",
+        "Installed Codex runtimes are kept; they may still be required."
+      ),
+      (
+        .builds, home + "/Library/Developer/CoreSimulator",
+        "Simulator apps and device data are kept. Review unused devices in Xcode."
+      ),
+      (
+        .builds, home + "/Library/Developer/Xcode/iOS DeviceSupport",
+        "Physical-device debugging support is kept. Review it in Xcode."
+      ),
+    ]
+    for (category, path, reason) in protectedLocations
+    where preferences.categories.contains(category) && FileManager.default.fileExists(atPath: path)
+    {
+      result.kept.append(.init(category: category, path: path, reason: reason))
+    }
+    var rules = CleanerCategory.allCases.filter(preferences.categories.contains).flatMap {
       category in CleanerCatalog.rules(category, home: home).map { (category, $0) }
     }
-    let caches = CacheCleaner.scan(
-      .init(rules: rules.map(\.1), date: .now, respectsAge: automatic))
-    result.notes += caches.notes
-    for candidate in caches.candidates {
-      guard let category = rules.first(where: { $0.1.path == candidate.rule.path })?.0 else {
-        continue
+    if !preferences.categories.isDisjoint(with: [.packages, .builds, .claude]) {
+      let roots = Array(
+        Set(
+          [FileManager.default.temporaryDirectory.path, "/private/tmp"].compactMap(
+            ReviewFile.canonicalPath)))
+      let temporary = TemporaryCleanup.discover(roots: roots, categories: preferences.categories)
+      rules += temporary.rules
+      result.kept += temporary.kept
+    }
+    for category in CleanerCategory.allCases where preferences.categories.contains(category) {
+      let caches = CacheCleaner.scan(
+        .init(rules: rules.filter { $0.0 == category }.map(\.1), date: .now, respectsAge: automatic)
+      )
+      result.notes += caches.notes
+      result.categoryNotes[category] = caches.notes
+      for candidate in caches.candidates {
+        result.items.append(
+          .init(
+            category: category, path: candidate.path, bytes: candidate.tree.bytes,
+            target: .cache(candidate)))
       }
-      result.items.append(
-        .init(
-          category: category, path: candidate.path, bytes: candidate.tree.bytes,
-          target: .cache(candidate)))
     }
 
     if !preferences.categories.isDisjoint(with: [.worktrees, .builds, .dependencies]) {
       let roots =
         CleanerCatalog.roots(home: home) + preferences.projectRoots
         + DeveloperLocations.additionalProjectRoots + WorkspacePreferences.load().map(\.directory)
+      let previousNoteCount = result.notes.count
       scanProjects(roots: roots, preferences: preferences, automatic: automatic, result: &result)
+      for category in preferences.categories.intersection([.worktrees, .builds, .dependencies]) {
+        result.categoryNotes[category, default: []] += result.notes.dropFirst(previousNoteCount)
+      }
     }
-    if preferences.categories.contains(.docker) {
+    if !preferences.categories.isDisjoint(with: [.docker, .dockerImages]) {
       do {
         let snapshot = try DockerStorageService().load()
-        if let cache = snapshot.categories.first(where: { $0.id == "build-cache" }),
+        if preferences.categories.contains(.dockerImages),
+          let images = snapshot.categories.first(where: { $0.id == "images" }),
+          images.reclaimableBytes > 0
+        {
+          result.items.append(
+            .init(
+              category: .dockerImages, path: "docker://local/images",
+              bytes: images.reclaimableBytes, target: .dockerImages))
+          let note =
+            "Docker image size is an upper estimate. Only images older than 24 hours and unused by any container are removed; tagged local images can be removed too."
+          result.notes.append(note)
+          result.categoryNotes[.dockerImages, default: []].append(note)
+        }
+        if preferences.categories.contains(.docker),
+          let cache = snapshot.categories.first(where: { $0.id == "build-cache" }),
           cache.reclaimableBytes > 0
         {
           result.items.append(
@@ -158,7 +229,13 @@ enum CleanerScanner {
             )
           }
         }
-      } catch { result.notes.append("Docker: " + error.localizedDescription) }
+      } catch {
+        let note = "Docker: " + error.localizedDescription
+        result.notes.append(note)
+        for category in preferences.categories.intersection([.docker, .dockerImages]) {
+          result.categoryNotes[category, default: []].append(note)
+        }
+      }
     }
     // Manual results feed separate category caches; combine them into a removal plan later.
     consolidate(&result, excludingOverlaps: automatic)

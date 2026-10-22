@@ -18,7 +18,7 @@ struct CleanerInventoryTests {
     #expect(report.items.map(\.path) == ["/fixture/checkout"])
   }
 
-  @Test func hidesSmallAndUnmeasuredEntriesWithoutChangingCleanupCandidates() {
+  @Test func hidesSmallEntriesButShowsUnmeasuredProtectionsWithoutChangingCandidates() {
     let sizes: [UInt64] = [49_999_999, 50_000_000, 50_000_001]
     let report = CleanerScan(
       items: sizes.map {
@@ -29,6 +29,7 @@ struct CleanerInventoryTests {
       })
     #expect(report.visibleItems.map(\.bytes) == [50_000_000, 50_000_001])
     #expect(report.visibleKept.compactMap(\.bytes) == [50_000_000, 50_000_001])
+    #expect(report.visibleKept.contains { $0.bytes == nil })
     #expect(report.items.count == 3)
     #expect(report.kept.count == 4)
   }

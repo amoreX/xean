@@ -108,6 +108,16 @@ struct DockerStorageService: Sendable {
     ).standardOutput
   }
 
+  /// Separate opt-in category; Docker itself excludes images referenced by any container.
+  func cleanUnusedImages() throws -> String {
+    let host = try localEndpoint()
+    return try run(
+      .init(
+        arguments: ["--host", host, "image", "prune", "--all", "--force", "--filter", "until=24h"],
+        timeout: 600)
+    ).standardOutput
+  }
+
   private func localEndpoint() throws -> String {
     let environment = ProcessInfo.processInfo.environment
     if environment["DOCKER_CONTEXT", default: ""].isEmpty,

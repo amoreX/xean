@@ -55,8 +55,8 @@ there are no system notifications or permission controls.
 
 Category title rows expand independently from native selection checkboxes. The whole title row
 opens its disclosure. Lists show item names, paths, sizes and a direct Delete action; worktrees also
-show branches. Protected items show their reason instead. Show only entries measured at 50 MB or
-larger; this display filter does not change bulk cleanup eligibility. Reuse completed category scans
+show branches. Protected items show their reason instead. Show eligible entries measured at 50 MB or
+larger, with a count and total for smaller eligible items. Show protected entries whose size is unknown, and display scan notes and running-tool skips. The display filter does not change bulk cleanup eligibility. Reuse completed category scans
 for 30 seconds, including when Clean follows a dropdown scan. Clear expired results before showing
 Checking… and scan only missing or expired categories. There is no Refresh button. Individual
 successful removals collapse out; failures stay with their reason.
@@ -86,7 +86,7 @@ and disk, including a single metric, and the original available/used/percentage 
 one metric while enabled. Login remains a native switch. Do not start the historical process monitors.
 
 Automatic cache/build cleanup uses a 24-hour minimum, dependencies seven days, and worktrees their
-configured age. Manual Clean skips age cutoffs while retaining activity and identity checks, except temporary Tickle test folders, which always require at least 24 hours. Nested
+configured age. Manual Clean skips age cutoffs while retaining activity and identity checks, except temporary Python environments, Xcode build output, and Tickle test folders, which always require at least 24 hours. Nested
 package links are fingerprinted without following destinations; linked cleanup roots stay protected.
 Scanning and validation have no arbitrary entry, depth or elapsed-time caps and support cancellation.
 Project discovery still discovers common locations without a Project folders editor. Every deletion

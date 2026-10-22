@@ -22,6 +22,7 @@ struct CleanerCleanup: Identifiable {
   var removedIDs: Set<String> = []
   var result: CleanerOutcome?
   var protectedCount = 0
+  var notes: [String] = []
 }
 
 @MainActor
@@ -140,7 +141,8 @@ final class CleanerModel: ObservableObject {
     for category in categories {
       categoryScans[category] = CleanerScan(
         items: report.items.filter { $0.category == category },
-        kept: report.kept.filter { $0.category == category }, notes: report.notes,
+        kept: report.kept.filter { $0.category == category },
+        notes: report.categoryNotes[category] ?? report.notes,
         scannedAt: completedAt)
     }
   }
@@ -243,6 +245,7 @@ final class CleanerModel: ObservableObject {
     if cleanup?.id == run.id {
       cleanup?.items = report.items
       cleanup?.protectedCount = report.kept.count
+      cleanup?.notes = Array(Set(report.notes)).sorted()
       cleanup?.phase = .removing
     }
     let result: CleanerOutcome

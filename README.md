@@ -57,19 +57,20 @@ names. The macOS display name and permission copy use **xean**. See
 | Claude Code | CLI and Claude desktop caches |
 | Codex | Desktop and renderer caches; sessions stay |
 | Superconductor | Desktop and web caches |
-| Coding editors | Cursor, VS Code, Windsurf, and Zed caches |
-| Package caches | npm, Yarn, pip, uv, Bun, and Homebrew download caches |
-| Browser caches | Supported Safari, Chrome, and Firefox caches |
-| Build files | Xcode DerivedData and supported Swift, Rust, and web build output |
+| Coding editors | Cursor, VS Code, Windsurf, Zed, and fed10 caches |
+| Package caches | npm/npx, Yarn, pip, uv, Bun, Homebrew, and verified temporary Python environments |
+| Browser caches | Supported Safari, Chrome, Firefox, and Zen caches |
+| Build files | Xcode DerivedData, temporary Xcode builds/tests, and supported Swift, Rust, and web build output |
 | Project dependencies | Inactive `node_modules` with a reinstall lockfile |
 | Docker build cache | Unused local builder cache; images, containers, and volumes stay |
+| Unused Docker images | Separate opt-in for unreferenced images older than 24h, including tagged local builds; containers and volumes stay |
 | Old worktrees | Eligible clean, merged, inactive Git-linked checkouts; branches stay |
 
 Claude Code, Codex, Superconductor, coding editors, package caches, and build files are selected by default.
 Browsers, dependencies, Docker, and worktrees are opt-in. Existing preferences are preserved.
 
 **Clean and individual Delete actions permanently remove eligible data immediately, without a second
-confirmation.** Manual cleanup has no age cutoff. Active tools, open files, protected locations, and items
+confirmation.** Manual cleanup skips ordinary cache/build age cutoffs; temporary environments/builds/tests and unused Docker images always require 24 hours. Active tools, open files, protected locations, and items
 that changed after scanning remain protected. See [cleanup rules](docs/CLEANER.md#cleanup-rules).
 
 ## One panel, a few controls
@@ -79,7 +80,7 @@ that changed after scanning remain protected. See [cleanup rules](docs/CLEANER.m
 - **Reuse recent scans.** Completed category scans are cached for 30 seconds. Expired or invalidated results
   disappear before a fresh scan starts. No refresh button, and no entry-count limit on cleaner traversal.
 - **Keep lists useful.** Category dropdowns show measured entries of at least 50 MB. This is a display
-  filter: bulk Clean can also remove smaller eligible items.
+  filter: smaller eligible items have a count and total. Scan skips and unknown-size protected locations remain visible.
 - **Auto-clean when space is low.** Set its GB threshold and opt in once. Checks run every 25 minutes while
   xean is running, using age rules for automatic deletion.
 - **Show a low-space warning.** “Notify when low” has its own threshold and adds a red exclamation badge.

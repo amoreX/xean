@@ -2,7 +2,7 @@ import Foundation
 
 enum CleanerCategory: String, CaseIterable, Codable, Sendable, Identifiable {
   case claude, codex, superconductor, editors, packages, browsers, builds, dependencies, docker,
-    worktrees
+    worktrees, dockerImages
 
   var id: String { rawValue }
   var title: String {
@@ -16,6 +16,7 @@ enum CleanerCategory: String, CaseIterable, Codable, Sendable, Identifiable {
     case .builds: "Build files"
     case .dependencies: "Project dependencies"
     case .docker: "Docker build cache"
+    case .dockerImages: "Unused Docker images"
     case .worktrees: "Old worktrees"
     }
   }
@@ -26,11 +27,12 @@ enum CleanerCategory: String, CaseIterable, Codable, Sendable, Identifiable {
     case .codex: "Desktop caches; sessions stay"
     case .superconductor: "Desktop and web caches"
     case .editors: "Cursor, VS Code, Windsurf, Zed and fed10"
-    case .packages: "npm, Yarn, pip, uv, Bun and Homebrew"
+    case .packages: "Package caches and temporary Python environments"
     case .browsers: "Safari, Chrome, Firefox and Zen"
-    case .builds: "Build output and stale Tickle test folders"
+    case .builds: "Build output and stale temporary builds/tests"
     case .dependencies: "Inactive node_modules with a lockfile"
     case .docker: "Unused build cache; containers and volumes stay"
+    case .dockerImages: "Unused images older than 24h; local builds may need rebuilding"
     case .worktrees: "Clean, merged, inactive Git worktrees"
     }
   }
@@ -193,6 +195,7 @@ enum CleanerCatalog {
     case .packages:
       return [
         rule(".npm/_cacache", owners: ["npm", "npx", "pnpm"]),
+        rule(".npm/_npx", owners: ["npm", "npx"]),
         rule("Library/Caches/Yarn", owners: ["yarn"]),
         rule("Library/Caches/pip", owners: ["pip", "pip3"]),
         rule(".cache/pip", owners: ["pip", "pip3"]),
@@ -216,7 +219,7 @@ enum CleanerCatalog {
         rules.append(staleTestRule(root: temporaryRoot))
       }
       return rules
-    case .dependencies, .docker, .worktrees: return []
+    case .dependencies, .docker, .dockerImages, .worktrees: return []
     }
   }
 }

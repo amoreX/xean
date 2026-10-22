@@ -65,7 +65,7 @@ struct CleanerCategoryRow: View {
 
 }
 
-private struct CleanerInventoryList: View {
+struct CleanerInventoryList: View {
   @ObservedObject var model: CleanerModel
   let report: CleanerScan
   @State private var items: [CleanerItem]
@@ -79,9 +79,18 @@ private struct CleanerInventoryList: View {
   var body: some View {
     let kept = report.visibleKept
     return VStack(alignment: .leading, spacing: 8) {
-      if items.isEmpty && kept.isEmpty {
-        Text("No items 50 MB or larger.").font(BlitzType.caption)
+      if let summary = report.inventorySummary {
+        Text(summary).font(BlitzType.caption)
           .foregroundStyle(.secondary).cleanerScrollItem()
+      }
+      ForEach(Array(Set(report.notes)).sorted(), id: \.self) { note in
+        Label(
+          note.replacingOccurrences(of: NSHomeDirectory(), with: "~"), systemImage: "info.circle"
+        )
+        .font(BlitzType.caption).foregroundStyle(.secondary).fixedSize(
+          horizontal: false, vertical: true
+        )
+        .cleanerScrollItem()
       }
       VStack(alignment: .leading, spacing: 0) {
         ForEach(items) { item in
