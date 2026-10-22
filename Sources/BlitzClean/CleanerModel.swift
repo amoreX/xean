@@ -181,6 +181,33 @@ final class CleanerModel: ObservableObject {
     isBusy = false
   }
 
+  func refreshScans() async {
+    guard !isBusy, cleanup == nil else { return }
+    isBusy = true
+    stopRequested = false
+    defer { isBusy = false }
+    let original = preferences.normalized
+    var requested = original
+    requested.categories.formUnion(categoryScans.keys)
+    invalidateCategories(Set(categoryScans.keys))
+    scan = nil
+    status = "Refreshing scans…"
+    if !requested.categories.isEmpty {
+      let report = await driver.scan(requested, automatic: false)
+      if !stopRequested, sameScope(original, preferences) {
+        cache(report, categories: requested.categories)
+      }
+    }
+    if stopRequested {
+      status = "Refresh stopped. Nothing was deleted."
+    } else if sameScope(original, preferences) {
+      status = "Scans refreshed."
+    } else {
+      status = "Selections changed. Refresh again."
+    }
+    await refreshDisk()
+  }
+
   func scanNow() async {
     guard !isBusy, !preferences.categories.isEmpty else { return }
     isBusy = true

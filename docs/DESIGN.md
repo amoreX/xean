@@ -16,7 +16,7 @@ pickers. Primary and secondary actions use native glass button styles on macOS 2
 standard bordered styles on earlier systems. Do not add custom tints, button outlines or shadow clips.
 Keep sections unboxed, with compact spacing and no horizontal dividers.
 
-The header is one line: lowercase “xean”, available space, a sun/moon theme button, and an accessible power icon.
+The header is one line: lowercase “xean”, available space, a refresh button, a sun/moon theme button, and an accessible power icon.
 The theme button crossfades the rendered popover over 180 ms without moving or rebuilding it, and
 remembers the choice across launches. The temporary image is local to the view, ignores input and
 accessibility, and is removed when the fade finishes or the panel closes/resizes. Rapid switches start
@@ -58,7 +58,7 @@ opens its disclosure. Lists show item names, paths, sizes and a direct Delete ac
 show branches. Protected items show their reason instead. Show eligible entries measured at 50 MB or
 larger, with a count and total for smaller eligible items. Show protected entries whose size is unknown, and display scan notes and running-tool skips. The display filter does not change bulk cleanup eligibility. Reuse completed category scans
 for 30 seconds, including when Clean follows a dropdown scan. Clear expired results before showing
-Checking… and scan only missing or expired categories. There is no Refresh button. Individual
+Checking… and scan only missing or expired categories. The header Refresh button bypasses this cache and rescans selected and previously opened categories without deleting anything. Disable it during scanning or cleanup and while showing cleanup results. Individual
 successful removals collapse out; failures stay with their reason.
 
 The idle footer has one right-aligned Clean button and no hint text. Clean immediately scans and

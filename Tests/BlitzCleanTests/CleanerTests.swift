@@ -597,6 +597,40 @@ struct CleanerModelTests {
     #expect(await context.driver.automaticScans == [false, true, false])
   }
 
+  @Test func refreshBypassesFreshCachesWithoutDeletingOrChangingSelections() async throws {
+    let context = try context()
+    defer { context.fixture.remove() }
+    let model = context.model
+    await model.loadCategory(.claude)
+    await model.loadCategory(.codex)
+    #expect(await context.driver.scanCount == 2)
+    await context.driver.setScanPaths([])
+    await model.refreshScans()
+    #expect(await context.driver.scanCount == 3)
+    #expect(model.categoryScans[.claude]?.items.isEmpty == true)
+    #expect(model.categoryScans[.codex] != nil)
+    #expect(model.preferences.categories == [.claude])
+    #expect(await context.driver.removals.isEmpty)
+    #expect(!model.isBusy)
+    #expect(model.status == "Scans refreshed.")
+    await model.loadCategory(.codex)
+    #expect(await context.driver.scanCount == 3)
+  }
+
+  @Test func refreshDoesNotStartAnotherScanWhileBusy() async throws {
+    let context = try context()
+    defer { context.fixture.remove() }
+    let first = Task { await context.model.refreshScans() }
+    for _ in 0..<100 {
+      if await context.driver.scanCount > 0 { break }
+      try await Task.sleep(for: .milliseconds(1))
+    }
+    await context.model.refreshScans()
+    await first.value
+    #expect(await context.driver.scanCount == 1)
+    #expect(await context.driver.removals.isEmpty)
+  }
+
   @Test func directDeletionFailureStaysVisibleAndCanBeRetried() async throws {
     let context = try context(fails: true)
     defer { context.fixture.remove() }

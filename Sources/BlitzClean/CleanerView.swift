@@ -70,6 +70,17 @@ struct CleanerView: View {
           .monospacedDigit().lineLimit(1)
       }.font(BlitzType.body).foregroundStyle(.secondary)
       Button {
+        model.sounds.play(.tap)
+        Task { await model.refreshScans() }
+      } label: {
+        Image(systemName: "arrow.clockwise")
+          .font(.system(size: 14, weight: .medium))
+          .frame(width: 22, height: 24)
+      }.buttonStyle(.borderless)
+        .disabled(model.isBusy || model.cleanup != nil)
+        .accessibilityLabel("Refresh scans")
+        .help("Rescan selected and previously opened categories without deleting anything")
+      Button {
         model.darkTheme.toggle()
         model.sounds.play(.toggle)
       } label: {
