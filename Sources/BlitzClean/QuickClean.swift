@@ -229,7 +229,8 @@ enum CacheCleaner {
         || executable.hasPrefix("python3.")
     else { return [] }
     let entryPoints: [String: String] = [
-      "npm-cli.js": "npm", "npx-cli.js": "npx", "pnpm.cjs": "pnpm", "pnpm.js": "pnpm",
+      "node-gyp.js": "node-gyp", "npm-cli.js": "npm", "npx-cli.js": "npx", "pnpm.cjs": "pnpm",
+      "pnpm.js": "pnpm",
       "yarn.js": "yarn", "yarn.cjs": "yarn", "pip": "pip", "pip3": "pip3",
       "uv": "uv", "uvx": "uvx", "brew.rb": "brew",
     ]

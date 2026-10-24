@@ -211,6 +211,10 @@ enum CleanerCatalog {
         rule(".cache/pip", owners: ["pip", "pip3"]),
         rule(".cache/uv", owners: ["uv", "uvx"]),
         rule(".bun/install/cache", owners: ["bun"]),
+        rule(".cargo/registry/cache", owners: ["cargo"]),
+        rule("Library/Caches/electron", owners: ["npm", "npx", "pnpm", "yarn", "bun", "electron"]),
+        rule("Library/Caches/node-gyp", owners: ["node-gyp", "npm", "npx", "pnpm", "yarn", "bun"]),
+        rule(".cache/node-gyp", owners: ["node-gyp", "npm", "npx", "pnpm", "yarn", "bun"]),
         rule("Library/Caches/Homebrew/downloads", owners: ["brew"]),
       ]
     case .browsers:

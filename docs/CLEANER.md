@@ -172,3 +172,13 @@ at least seven days of age even for manual cleanup, no active interpreter or pro
 identity/ownership/internal-volume checks again before deletion. In Git projects, environments must be
 ignored and contain no tracked files. Unverified environments appear as
 protected items with reasons; installed standalone runtimes are not included.
+
+Rust builds are cleaned selectively: known `incremental`, `deps`, `build`, `examples`, and
+`.fingerprint` directories inside a discovered Cargo project's `target/debug` and `target/release`.
+Top-level executables and app bundles stay. The target must be Git-ignored and contain no tracked
+files. Active Rust compiler/Cargo processes, keep-running projects, and open files in each candidate
+block removal; checks run again before deletion. Custom target directories and cross-compilation
+layouts are not currently discovered. Automatic cleanup retains the one-day age requirement.
+Package caches also include Cargo registry download archives, Electron downloads, and node-gyp
+headers. Cargo sources, credentials, and installed tools stay; existing package-manager and open-file
+guards apply to all download caches.

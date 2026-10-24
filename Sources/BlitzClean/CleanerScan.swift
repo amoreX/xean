@@ -3,6 +3,7 @@ import Foundation
 enum CleanerTarget: Sendable {
   case cache(CacheCandidate)
   case build(CacheCandidate, project: String)
+  case rustBuild(CacheCandidate, project: String)
   case artifact(DeveloperArtifact, tree: CacheTree)
   case docker
   case dockerImages
@@ -90,6 +91,9 @@ struct NativeCleanerDriver: CleanerDriver {
       guard preferences.categories.contains(item.category) else { throw CacheCleanError.unverified }
       switch item.target {
       case .cache(let cache): return try CacheCleaner.delete(cache, respectsAge: automatic)
+      case .rustBuild(let cache, let project):
+        try RustBuildCleanup.validate(path: cache.path, project: project)
+        return try CacheCleaner.delete(cache, respectsAge: automatic)
       case .build(let cache, let project):
         try CleanerProjectSafety.validateBuild(path: cache.path, project: project)
         try CleanerProjectSafety.validateActivity(project)
@@ -393,6 +397,10 @@ enum CleanerScanner {
       for project in Set(discovery.projects + discovery.repositories).sorted() {
         guard !Task.isCancelled else { return }
         for name in CleanerProjectSafety.buildNames(project: project) {
+          if name == "target" {
+            RustBuildCleanup.scan(project: project, automatic: automatic, result: &result)
+            continue
+          }
           let path = project + "/" + name
           guard FileManager.default.fileExists(atPath: path) else { continue }
           do {
@@ -509,7 +517,7 @@ struct CleanerDeletionResult: Sendable {
     }
     func scope(_ item: CleanerItem) -> String {
       switch item.target {
-      case .build(_, let project): return project
+      case .build(_, let project), .rustBuild(_, let project): return project
       case .artifact(let artifact, _): return artifact.projectPath
       default: return item.path
       }
