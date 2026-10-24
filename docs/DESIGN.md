@@ -62,7 +62,7 @@ for 30 seconds, including when Clean follows a dropdown scan. Clear expired resu
 Checking… and scan only missing or expired categories. The header Refresh button bypasses this cache and rescans selected and previously opened categories without deleting anything. Disable it during scanning or cleanup and while showing cleanup results. Individual
 successful removals collapse out; failures stay with their reason.
 
-The idle footer shows an estimated reclaimable total beside the right-aligned Clean button. Opening the panel scans selected categories, reusing results for at most 30 seconds. Selection changes update the estimate; missing results show Calculating…. Protected files are excluded and overlapping worktree items count once. Clean immediately scans and
+The idle footer shows an estimated reclaimable total beside the right-aligned Clean button. Opening the panel scans selected categories, reusing results for at most 30 seconds. Selection changes update the estimate; while results are missing, show only the left scan indicator and status, with no estimate placeholder. Protected files are excluded and overlapping worktree items count once. Clean immediately scans and
 removes eligible selected data, with no review or second confirmation. Replace the settings with a
 cleanup screen: scanning status first, then the actual deletion queue. Collapse each row only after
 its deletion succeeds; failures stay visible. After the final removal finishes show a result screen with

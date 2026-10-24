@@ -275,13 +275,15 @@ struct CleanerView: View {
         }
       }
       Spacer(minLength: 0)
-      Text(model.reclaimableLabel)
-        .font(BlitzType.caption).foregroundStyle(.secondary)
-        .monospacedDigit().lineLimit(1).fixedSize()
-        .help(
-          "Estimated eligible space in selected categories. Protected files are excluded; actual disk space recovered may differ."
-        )
-        .accessibilityIdentifier("cleaner-reclaimable")
+      if model.reclaimableBytes != nil {
+        Text(model.reclaimableLabel)
+          .font(BlitzType.caption).foregroundStyle(.secondary)
+          .monospacedDigit().lineLimit(1).fixedSize()
+          .help(
+            "Estimated eligible space in selected categories. Protected files are excluded; actual disk space recovered may differ."
+          )
+          .accessibilityIdentifier("cleaner-reclaimable")
+      }
       Button("Clean") {
         Task { await model.cleanSelected() }
       }.cleanerButton(prominent: true)
