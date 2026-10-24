@@ -36,6 +36,7 @@ final class CleanerModel: ObservableObject {
       preferences.save(defaults)
       if !sameScope(preferences, oldValue) {
         scan = nil
+        if panelVisible { scheduleEstimate() }
       }
       if preferences.projectRoots != oldValue.projectRoots
         || preferences.worktreeDays != oldValue.worktreeDays
@@ -72,6 +73,8 @@ final class CleanerModel: ObservableObject {
   private let driver: any CleanerDriver
   private let history: CleanupHistoryStore
   private let now: () -> Date
+  private var panelVisible = false
+  private var estimateTask: Task<Void, Never>?
   private var timer: Task<Void, Never>?
   private var statusDismissal: Task<Void, Never>?
 
@@ -95,6 +98,42 @@ final class CleanerModel: ObservableObject {
     preferences.warningsEnabled && preferences.isBelowThreshold(available)
   }
 
+  var reclaimableBytes: UInt64? {
+    guard preferences.categories.allSatisfy({ categoryScans[$0] != nil }) else { return nil }
+    var report = CleanerScan(
+      items: preferences.categories.flatMap { categoryScans[$0]?.items ?? [] })
+    CleanerScanner.consolidate(&report)
+    return report.items.reduce(0) { $0 + $1.bytes }
+  }
+
+  var reclaimableLabel: String {
+    guard let bytes = reclaimableBytes else { return "Calculating…" }
+    return "≈ \(ByteText.compact(bytes)) can free"
+  }
+
+  func panelOpened() {
+    panelVisible = true
+    scheduleEstimate()
+  }
+
+  private func scheduleEstimate() {
+    guard estimateTask == nil else { return }
+    estimateTask = Task { [weak self] in
+      guard let self else { return }
+      defer { estimateTask = nil }
+      while panelVisible && !Task.isCancelled {
+        if isBusy {
+          do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+          continue
+        }
+        guard cleanup == nil else { return }
+        let requested = preferences.normalized
+        await scanNow()
+        if sameScope(requested, preferences) { return }
+      }
+    }
+  }
+
   func start() {
     guard timer == nil else { return }
     let last = defaults.object(forKey: "cleaner.lastCheck") as? Date ?? .distantPast
@@ -111,6 +150,7 @@ final class CleanerModel: ObservableObject {
   }
 
   func stop() {
+    estimateTask?.cancel()
     stopRequested = true
     timer?.cancel()
     timer = nil
@@ -261,6 +301,7 @@ final class CleanerModel: ObservableObject {
 
   /// Closing the panel clears this presentation, never an in-flight cleanup.
   func panelClosed() {
+    panelVisible = false
     cleanup = nil
     removedItemIDs = []
     if !isBusy { status = "" }

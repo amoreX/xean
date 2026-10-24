@@ -247,6 +247,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     button.layoutSubtreeIfNeeded()
     NSApp.activate(ignoringOtherApps: true)
     panel.present(relativeTo: cleanerAnchor.bounds, of: cleanerAnchor)
+    cleaner.panelOpened()
     button.highlight(true)
     localClickMonitor = NSEvent.addLocalMonitorForEvents(
       matching: [.leftMouseDown, .rightMouseDown, .keyDown]
