@@ -57,12 +57,12 @@ there are no system notifications or permission controls.
 Category title rows expand independently from native selection checkboxes. The whole title row
 opens its disclosure. Lists show item names, paths, sizes and a direct Delete action; worktrees also
 show branches. Protected items show their reason instead. Show eligible entries measured at 50 MB or
-larger, with a count and total for smaller eligible items. Show protected entries whose size is unknown, and display scan notes and running-tool skips. The display filter does not change bulk cleanup eligibility. Reuse completed category scans
-for 30 seconds, including when Clean follows a dropdown scan. Clear expired results before showing
+larger, with a count and total for smaller eligible items. Show protected entries whose size is unknown, and display scan notes and running-tool skips. The display filter does not change bulk cleanup eligibility. Reuse completed disclosure scans
+for 30 seconds. Clean always scans fresh. Clear expired results before showing
 Checking… and scan only missing or expired categories. The header Refresh button bypasses this cache and rescans selected and previously opened categories without deleting anything. Disable it during scanning or cleanup and while showing cleanup results. Individual
 successful removals collapse out; failures stay with their reason.
 
-The idle footer shows an estimated reclaimable total beside the right-aligned Clean button. Opening the panel scans selected categories, reusing results for at most 30 seconds. Selection changes update the estimate; while results are missing, show only the left scan indicator and status, with no estimate placeholder. Protected files are excluded and overlapping worktree items count once. Clean immediately scans and
+The idle footer shows an estimated reclaimable total beside the right-aligned Clean button. A read-only background scan refreshes selected categories approximately every 30 seconds, without overlapping scans or disabling controls. Opening the panel shows cached results immediately, or starts the initial estimate if none exists. Clean cancels and joins an in-flight estimate, then scans fresh before deletion. Selection changes update the estimate; while results are missing, show only the left scan indicator and status, with no estimate placeholder. Protected files are excluded and overlapping worktree items count once. Clean immediately scans and
 removes eligible selected data, with no review or second confirmation. Replace the settings with a
 cleanup screen: scanning status first, then the actual deletion queue. Collapse each row only after
 its deletion succeeds; failures stay visible. After the final removal finishes show a result screen with

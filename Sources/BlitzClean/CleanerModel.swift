@@ -36,7 +36,7 @@ final class CleanerModel: ObservableObject {
       preferences.save(defaults)
       if !sameScope(preferences, oldValue) {
         scan = nil
-        if panelVisible { scheduleEstimate() }
+        if timer != nil || panelVisible { scheduleEstimate() }
       }
       if preferences.projectRoots != oldValue.projectRoots
         || preferences.worktreeDays != oldValue.worktreeDays
@@ -113,25 +113,30 @@ final class CleanerModel: ObservableObject {
 
   func panelOpened() {
     panelVisible = true
-    scheduleEstimate()
+    if reclaimableBytes == nil { scheduleEstimate() }
   }
 
   private func scheduleEstimate() {
-    guard estimateTask == nil else { return }
+    guard estimateTask == nil, !isBusy, cleanup == nil else { return }
     estimateTask = Task { [weak self] in
       guard let self else { return }
       defer { estimateTask = nil }
-      while panelVisible && !Task.isCancelled {
-        if isBusy {
-          do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
-          continue
-        }
-        guard cleanup == nil else { return }
+      repeat {
         let requested = preferences.normalized
-        await scanNow()
-        if sameScope(requested, preferences) { return }
-      }
+        let report = await driver.scan(requested, automatic: false)
+        guard !Task.isCancelled, !isBusy else { return }
+        if sameScope(requested, preferences) {
+          cache(report, categories: requested.categories)
+          return
+        }
+      } while !Task.isCancelled
     }
+  }
+
+  private func stopEstimate() async {
+    let task = estimateTask
+    task?.cancel()
+    await task?.value
   }
 
   func start() {
@@ -140,11 +145,14 @@ final class CleanerModel: ObservableObject {
     nextCheck = max(
       .now.addingTimeInterval(60),
       last.addingTimeInterval(Double(preferences.normalized.checkMinutes) * 60))
+    scheduleEstimate()
     timer = Task { [weak self] in
       await self?.refreshDisk()
       while !Task.isCancelled {
-        do { try await Task.sleep(for: .seconds(60)) } catch { break }
+        do { try await Task.sleep(for: .seconds(30)) } catch { break }
         await self?.backgroundCheck()
+        guard !Task.isCancelled else { break }
+        self?.scheduleEstimate()
       }
     }
   }
@@ -193,6 +201,7 @@ final class CleanerModel: ObservableObject {
     prepareCategory(category)
     guard categoryScans[category] == nil else { return }
     isBusy = true
+    await stopEstimate()
     stopRequested = false
     loadingCategory = category
     let original = preferences.normalized
@@ -215,6 +224,7 @@ final class CleanerModel: ObservableObject {
       })
     else { return }
     isBusy = true
+    await stopEstimate()
     stopRequested = false
     sounds.play(.tap)
     await clean(
@@ -225,6 +235,7 @@ final class CleanerModel: ObservableObject {
   func refreshScans() async {
     guard !isBusy, cleanup == nil else { return }
     isBusy = true
+    await stopEstimate()
     stopRequested = false
     defer { isBusy = false }
     let original = preferences.normalized
@@ -262,6 +273,7 @@ final class CleanerModel: ObservableObject {
   func scanNow() async {
     guard !isBusy, !preferences.categories.isEmpty else { return }
     isBusy = true
+    await stopEstimate()
     stopRequested = false
     await scanSelection(preferences.normalized)
     isBusy = false
@@ -311,11 +323,13 @@ final class CleanerModel: ObservableObject {
     guard !isBusy, !preferences.categories.isEmpty else { return }
     sounds.play(.tap)
     isBusy = true
+    await stopEstimate()
     stopRequested = false
     let run = CleanerCleanup()
     cleanup = run
     defer { isBusy = false }
     let requested = preferences.normalized
+    invalidateCategories(requested.categories)
     await scanSelection(requested)
     guard !stopRequested, requested == preferences.normalized, let report = scan else {
       if cleanup?.id == run.id { cleanup = nil }
@@ -344,6 +358,7 @@ final class CleanerModel: ObservableObject {
       nextCheck.map({ now >= $0 }) ?? true
     else { return }
     isBusy = true
+    await stopEstimate()
     stopRequested = false
     let requested = preferences.normalized
     nextCheck = now.addingTimeInterval(Double(requested.checkMinutes) * 60)

@@ -68,7 +68,7 @@ background scheduling, the last persisted outcome, and the current `CleanerClean
 ### Manual Clean
 
 1. Capture the selected scope and create a unique cleanup presentation ID.
-2. Reuse completed manual category scans at most 30 seconds old; scan missing or expired categories.
+2. Cancel and join any estimate scan, then scan all selected categories fresh.
 3. Consolidate candidates, deduplicating paths and excluding descendants of a selected worktree.
 4. Revalidate and remove each candidate through the native driver.
 5. Record each success, invalidate matching inventory paths, and publish its removed ID. The view collapses
@@ -78,6 +78,8 @@ background scheduling, the last persisted outcome, and the current `CleanerClean
 Closing the panel clears its presentation ID, not the underlying operation. Completion cannot restore an
 old result into a newly opened panel. Individual Delete uses the same removal pipeline with a single
 category, even if that category is unchecked for bulk cleanup; it uses brief footer feedback instead.
+
+A separate read-only estimate scan runs at startup and on the 30-second timer while idle. It does not set the UI busy state or clear cached totals. Scans never overlap; foreground scans and deletion cancel and join the estimate first. Results are published only if the selection still matches, and opening the panel displays the latest cached total. A long scan skips timer ticks rather than starting overlapping work.
 
 ### Automatic cleanup
 

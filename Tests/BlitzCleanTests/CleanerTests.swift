@@ -539,27 +539,21 @@ struct CleanerModelTests {
     #expect(await context.driver.scanCount == 3)
   }
 
-  @Test func cleanReusesFreshCategoriesAndScansOnlyMissingOrExpiredOnes() async throws {
-    let clock = CleanerFixtureClock()
-    let context = try context(now: { clock.date })
+  @Test func cleanAlwaysScansFreshEvenWithCachedCategories() async throws {
+    let context = try context()
     defer { context.fixture.remove() }
     let model = context.model
     await model.loadCategory(.claude)
-    await context.driver.setScanPaths(["codex-cache"])
+    await context.driver.setScanPaths(["fresh-cache"])
     model.preferences.categories = [.claude, .codex]
     await model.cleanSelected()
     #expect(await context.driver.scanCount == 2)
-    #expect(await context.driver.scanPreferences.last?.categories == [.codex])
-    #expect(Set(await context.driver.removals) == ["fixture-one", "fixture-two", "codex-cache"])
-    #expect(model.categoryScans[.claude]?.items.isEmpty == true)
-    #expect(model.categoryScans[.codex]?.items.isEmpty == true)
-    await model.cleanSelected()
-    #expect(await context.driver.scanCount == 2)
-    clock.date = clock.date.addingTimeInterval(31)
-    await context.driver.setScanPaths([])
-    await model.scanNow()
-    #expect(await context.driver.scanCount == 3)
     #expect(await context.driver.scanPreferences.last?.categories == [.claude, .codex])
+    #expect(await context.driver.removals == ["fresh-cache"])
+    await context.driver.setScanPaths([])
+    await model.cleanSelected()
+    #expect(await context.driver.scanCount == 3)
+    #expect(model.cleanup?.result?.removed == 0)
   }
 
   @Test func combiningCachedWorktreesAndDependenciesNeverDeletesOverlappingPaths() async throws {
@@ -572,7 +566,7 @@ struct CleanerModelTests {
     await model.loadCategory(.worktrees)
     model.preferences.categories = [.dependencies, .worktrees]
     await model.cleanSelected()
-    #expect(await context.driver.scanCount == 2)
+    #expect(await context.driver.scanCount == 3)
     #expect(await context.driver.removals == ["checkout"])
     #expect(model.categoryScans[.dependencies]?.items.isEmpty == true)
     #expect(model.categoryScans[.worktrees]?.items.isEmpty == true)
