@@ -4,17 +4,22 @@ import Foundation
 
 enum CleanupDataKind: Sendable {
   case cache
+  case discoveredAppCache
   case diagnosticReport
   case temporaryEnvironment, temporaryBuild
   case staleTestDirectory
   case pythonEnvironment, browserDownload, updaterCache
 
   var alwaysRequiresAge: Bool {
-    self == .staleTestDirectory || self == .temporaryEnvironment || self == .temporaryBuild
+    self == .discoveredAppCache || self == .staleTestDirectory || self == .temporaryEnvironment
+      || self == .temporaryBuild
       || self == .pythonEnvironment || self == .browserDownload || self == .updaterCache
   }
 
-  var minimumAgeDays: Int { self == .diagnosticReport ? 30 : self == .pythonEnvironment ? 7 : 1 }
+  var minimumAgeDays: Int {
+    self == .diagnosticReport
+      ? 30 : self == .pythonEnvironment || self == .discoveredAppCache ? 7 : 1
+  }
 }
 
 struct CacheRule: Sendable {
@@ -25,6 +30,7 @@ struct CacheRule: Sendable {
   let kind: CleanupDataKind
   var checksRootActivity = false
   var entryName: String? = nil
+  var owningApp: String? = nil
 
   static var standard: [Self] {
     let home = FileManager.default.homeDirectoryForCurrentUser.path
@@ -252,6 +258,12 @@ enum CacheCleaner {
     for rule in request.rules {
       guard FileManager.default.fileExists(atPath: rule.path) else { continue }
       guard !Task.isCancelled else { break }
+      if rule.kind == .discoveredAppCache {
+        do { try AppCacheDiscovery.validate(rule) } catch {
+          notes.append("\(rule.path): \(error.localizedDescription)")
+          continue
+        }
+      }
       guard owners.isDisjoint(with: rule.owners) else {
         notes.append(
           "\(rule.title) (\(rule.path)): app or package manager is running; kept. Close it and scan again."
@@ -346,6 +358,7 @@ enum CacheCleaner {
 
   static func delete(_ candidate: CacheCandidate, respectsAge: Bool = true) throws -> CleanupWin {
     try validateLocation(candidate)
+    if candidate.rule.kind == .discoveredAppCache { try AppCacheDiscovery.validate(candidate.rule) }
     let owners = try processes()
     guard owners.isDisjoint(with: candidate.rule.owners) else { throw CacheCleanError.busy }
     if candidate.rule.checksRootActivity { try validateInactive(candidate.rule.path) }

@@ -34,7 +34,7 @@ enum CleanerCategory: String, CaseIterable, Codable, Sendable, Identifiable {
     case .builds: "Build output and stale temporary builds/tests"
     case .dependencies: "Inactive node_modules with a lockfile"
     case .docker: "Unused build cache; containers and volumes stay"
-    case .appCaches: "WhatsApp updates, Slack and Linear caches"
+    case .appCaches: "Installed app caches and update downloads"
     case .pythonEnvironments: "Inactive, reproducible environments older than 7 days"
     case .dockerImages: "Unused images older than 24h; local builds may need rebuilding"
     case .worktrees: "Clean, merged, inactive Git worktrees"

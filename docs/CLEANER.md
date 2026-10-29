@@ -182,3 +182,13 @@ layouts are not currently discovered. Automatic cleanup retains the one-day age 
 Package caches also include Cargo registry download archives, Electron downloads, and node-gyp
 headers. Cargo sources, credentials, and installed tools stay; existing package-manager and open-file
 guards apply to all download caches.
+
+Other app caches also discovers conventional cache locations for installed third-party apps in
+`/Applications` and `~/Applications`. It matches bundle identifiers and app names to direct folders
+under `~/Library/Caches`, including conventional `-updater` names, and cache-only folders such as
+`Cache`, `Code Cache`, and `GPUCache` under Application Support. Existing specialized rules take priority.
+Unknown or ambiguous owners are kept with a diagnostic note. New discovered caches require seven days
+of inactivity even for manual cleanup, no running app/helper, and the existing open-file, ownership,
+symlink, internal-volume, and fingerprint checks again before deletion. This category is opt-in.
+Arbitrary project outputs, profile stores, sandbox containers, and runtime installations are not
+classified as disposable just because their names contain “cache” or “tmp”.

@@ -124,3 +124,7 @@ at least seven days of age even for manual cleanup, no active interpreter or pro
 identity/ownership/internal-volume checks again before deletion. In Git projects, environments must be
 ignored and contain no tracked files. Unverified environments appear as
 protected items with reasons; installed standalone runtimes are not included.
+
+Other app caches now also discovers installed third-party app caches using bundle metadata and standard
+cache paths. Its subtitle is “Installed app caches and update downloads”. Unknown owners are kept with
+notes; discovery never expands a specialized cleanup rule or enables the opt-in category automatically.

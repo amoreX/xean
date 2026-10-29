@@ -170,6 +170,18 @@ enum CleanerScanner {
     var rules = CleanerCategory.allCases.filter(preferences.categories.contains).flatMap {
       category in CleanerCatalog.rules(category, home: home).map { (category, $0) }
     }
+    if preferences.categories.contains(.appCaches) {
+      let reserved = CleanerCategory.allCases.flatMap {
+        CleanerCatalog.rules($0, home: home).map(\.path)
+      }
+      let discovered = AppCacheDiscovery.discover(
+        home: home,
+        apps: AppCacheDiscovery.installed(in: ["/Applications", home + "/Applications"]),
+        excluding: reserved)
+      rules += discovered.rules.map { (.appCaches, $0) }
+      result.notes += discovered.notes
+      result.categoryNotes[.appCaches] = discovered.notes
+    }
     if !preferences.categories.isDisjoint(with: [.packages, .builds, .claude]) {
       let roots = Array(
         Set(
@@ -184,7 +196,7 @@ enum CleanerScanner {
         .init(rules: rules.filter { $0.0 == category }.map(\.1), date: .now, respectsAge: automatic)
       )
       result.notes += caches.notes
-      result.categoryNotes[category] = caches.notes
+      result.categoryNotes[category, default: []] += caches.notes
       for candidate in caches.candidates {
         result.items.append(
           .init(
